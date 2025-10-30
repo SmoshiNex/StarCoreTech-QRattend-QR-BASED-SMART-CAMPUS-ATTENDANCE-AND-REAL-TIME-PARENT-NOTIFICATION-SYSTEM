@@ -28,7 +28,13 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "@hookform/resolvers": "^5.2.2",
+        "@radix-ui/react-dialog": "^1.1.15",
+        "@radix-ui/react-label": "^2.1.7",
         "@radix-ui/react-slot": "^1.2.3",
-        "lucide-react": "^0.548.0"
+        "@radix-ui/react-tabs": "^1.1.13",
+        "lucide-react": "^0.548.0",
+        "react-hook-form": "^7.65.0",
+        "zod": "^3.25.76"
     }
 }

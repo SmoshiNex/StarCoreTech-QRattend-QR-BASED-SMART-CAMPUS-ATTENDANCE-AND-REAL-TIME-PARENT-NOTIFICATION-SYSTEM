@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+
+class Student extends Authenticatable
+{
+    use HasFactory, Notifiable;
+
+    protected $fillable = [
+        'student_id',
+        'first_name',
+        'last_name',
+        'email',
+        'course',
+        'year_level',
+        'section',
+    ];
+
+    protected $hidden = [
+        'remember_token',
+    ];
+}
