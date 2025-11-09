@@ -14,13 +14,14 @@ class StudentAuthController extends Controller
     {
         $request->validate([
             'student_id' => 'required|string|exists:students,student_id',
+            'password' => 'required|string',
         ]);
 
         $student = Student::where('student_id', $request->student_id)->first();
 
-        if (!$student) {
+        if (!$student || !password_verify($request->password, $student->password)) {
             return back()->withErrors([
-                'student_id' => 'Student ID not found.',
+                'student_id' => 'Invalid credentials.',
             ]);
         }
 

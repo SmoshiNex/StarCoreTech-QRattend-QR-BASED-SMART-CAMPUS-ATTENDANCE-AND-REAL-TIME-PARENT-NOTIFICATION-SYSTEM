@@ -18,9 +18,11 @@ class Student extends Authenticatable
         'course',
         'year_level',
         'section',
+        'password',
     ];
 
     protected $hidden = [
+        'password',
         'remember_token',
     ];
 }
