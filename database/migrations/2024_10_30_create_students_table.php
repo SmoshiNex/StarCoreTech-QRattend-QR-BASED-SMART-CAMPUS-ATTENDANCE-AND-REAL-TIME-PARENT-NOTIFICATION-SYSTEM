@@ -15,8 +15,9 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('email')->unique();
             $table->string('course');
-            $table->integer('year_level');
+            $table->string('year_level');
             $table->string('section');
+            $table->string('password')->nullable(false)->default(bcrypt('default123'));
             $table->rememberToken();
             $table->timestamps();
         });
