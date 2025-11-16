@@ -13,7 +13,7 @@ export default function Header() {
                     <img src="/images/logo.jpg" alt="Logo" className="h-10 w-10" />
                     <div>
                         <h2 className="font-semibold text-xl">Smart Campus Attendance</h2>
-                        <p className="text-sm text-gray-500">Teacher Portal</p>
+                        <p className="text-sm text-gray-500">Qr Attend Teacher Portal</p>
                     </div>
                 </div>
                 <nav className="flex items-center gap-6">

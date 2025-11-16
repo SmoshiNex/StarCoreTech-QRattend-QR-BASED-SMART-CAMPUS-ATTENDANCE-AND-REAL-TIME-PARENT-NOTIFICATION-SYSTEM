@@ -33,9 +33,12 @@ class StudentAuthController extends Controller
     public function dashboard()
     {
         $student = Auth::guard('student')->user();
+        $enrolledClasses = $student->classes()->count();
         
         return Inertia::render('Student/Dashboard', [
-            'student' => $student
+            'student' => $student,
+            'enrolledClasses' => $enrolledClasses,
+            'attendanceRate' => 95
         ]);
     }
 

@@ -1,8 +1,8 @@
 import { Button } from "@/Components/ui/button";
 import { Card } from "@/Components/ui/card";
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Eye } from 'lucide-react';
 
-export default function ClassCard({ classItem, onEdit, onDelete }) {
+export default function ClassCard({ classItem, onEdit, onDelete, onShowQR, onViewStudents }) {
     return (
         <Card className="p-6 bg-white">
             <div className="flex justify-between items-start mb-4">
@@ -13,7 +13,16 @@ export default function ClassCard({ classItem, onEdit, onDelete }) {
                             <Button 
                                 variant="ghost" 
                                 className="h-8 w-8 p-1" 
+                                onClick={() => onViewStudents(classItem)}
+                                title="View enrolled students"
+                            >
+                                <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                className="h-8 w-8 p-1" 
                                 onClick={() => onEdit(classItem)}
+                                title="Edit class"
                             >
                                 <Edit className="h-4 w-4" />
                             </Button>
@@ -21,6 +30,7 @@ export default function ClassCard({ classItem, onEdit, onDelete }) {
                                 variant="ghost" 
                                 className="h-8 w-8 p-1 text-red-500 hover:text-red-700" 
                                 onClick={() => onDelete(classItem)}
+                                title="Delete class"
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
@@ -42,7 +52,7 @@ export default function ClassCard({ classItem, onEdit, onDelete }) {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={() => onShowQR(classItem)}>
                     Registration QR
                 </Button>
                 <Button className="w-full">

@@ -20,6 +20,18 @@ class AuthSeeder extends Seeder
             'course' => 'BS IT',
             'year_level' => 3,
             'section' => 'A',
+            'password' => Hash::make('password123'),
+        ]);
+
+         Student::create([
+            'student_id' => '2021-00012',
+            'first_name' => 'John Matt',
+            'last_name' => 'Beltran',
+            'email' => 'matt@student.wmsu.edu.ph',
+            'course' => 'BS IT',
+            'year_level' => 3,
+            'section' => 'A',
+            'password' => Hash::make('password123'),
         ]);
 
         // Create a test teacher

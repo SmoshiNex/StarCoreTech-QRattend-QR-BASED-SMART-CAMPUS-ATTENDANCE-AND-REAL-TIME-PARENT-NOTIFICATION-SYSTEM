@@ -55,7 +55,7 @@ export default function TeacherDashboard({ teacher }) {
                 <Header />
 
                 <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    <WelcomeSection teacherName={teacher.first_name} />
+                    <WelcomeSection teacherFirstName={teacher.first_name} teacherLastName={teacher.last_name}/>
                     <StatsGrid stats={stats} />
                     <TodayClasses classes={stats.classes} />
                 </main>
