@@ -1,60 +1,114 @@
-import { Head, Link } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
+import { Head, router } from '@inertiajs/react';
+import { User, QrCode, Clock } from 'lucide-react';
+import { useState } from 'react';
 
-export default function StudentDashboard({ student }) {
+
+export default function StudentDashboard({ student, enrolledClasses = 4, attendanceRate = 95 }) {
+    const [showQRScanner, setShowQRScanner] = useState(false);
+
     const handleLogout = () => {
-        window.location.href = '/';
+        router.post('/logout');
     };
+
+    const handleScanToCheckIn = () => {
+        setShowQRScanner(true);
+        // In a real app, this would open the camera to scan QR code
+        alert('QR Scanner would open here. For now, redirect to QR scan page.');
+    };
+
+    const handleAttendanceHistory = () => {
+        // Navigate to attendance history page
+        alert('Attendance history feature coming soon!');
+    };
+
     return (
         <>
             <Head title="Student Dashboard" />
-            <div className="min-h-screen bg-gray-100">
-                <nav className="bg-white shadow-sm">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex justify-between h-16">
-                            <div className="flex items-center">
-                                <h2 className="text-2xl font-bold text-gray-800">
-                                    Student Dashboard
-                                </h2>
-                            </div>
-                            <div className="flex items-center">
-                                <span className="text-gray-600 mr-4">
-                                    Welcome, {student.first_name}
-                                </span>
-                                <Button variant="outline" onClick={handleLogout}>
-                                    Log Out
-                                </Button>
+            <div className="min-h-screen bg-gray-50">
+                {/* Header */}
+                <header className="bg-white border-b border-gray-200 px-6 py-4">
+                    <div className="max-w-4xl mx-auto flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <img src="/images/logo.jpg" alt="Logo" className="h-10 w-10 rounded-full" />
+                            <div>
+                                <h1 className="text-lg font-bold text-gray-900">Smart Campus Attendance</h1>
+                                <p className="text-xs text-gray-500">Qr Attend Student Portal</p>
                             </div>
                         </div>
+                        <button
+                            onClick={handleLogout}
+                            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors"
+                        >
+                            Logout
+                        </button>
                     </div>
-                </nav>
+                </header>
 
-                <main className="py-10">
-                    <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                        <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                            <div className="p-6 text-gray-900">
-                                <h3 className="text-lg font-medium mb-4">Your Information</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-gray-600">Student ID</p>
-                                        <p className="font-medium">{student.student_id}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Full Name</p>
-                                        <p className="font-medium">{`${student.first_name} ${student.last_name}`}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Course</p>
-                                        <p className="font-medium">{student.course}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Year & Section</p>
-                                        <p className="font-medium">{`${student.year_level}-${student.section}`}</p>
-                                    </div>
-                                </div>
+                {/* Main Content */}
+                <main className="max-w-4xl mx-auto px-6 py-6 space-y-6">
+                    {/* Welcome Card */}
+                    <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                                <User className="w-6 h-6 text-gray-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">Welcome! {student.first_name} {student.last_name} </h2>
+                                <p className="text-sm text-gray-500">Student ID: {student.student_id}</p>
                             </div>
                         </div>
+                        <div className="mt-4 text-sm text-gray-600">
+                            {new Date().toLocaleDateString('en-US', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                            })}
+                        </div>
                     </div>
+
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                            <p className="text-sm text-gray-600 mb-2">Enrolled Classes</p>
+                            <p className="text-4xl font-bold text-gray-900">{enrolledClasses}</p>
+                        </div>
+                        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                            <p className="text-sm text-gray-600 mb-2">Attendance Rate</p>
+                            <p className="text-4xl font-bold text-gray-900">{attendanceRate}%</p>
+                        </div>
+                    </div>
+
+                    {/* QR Check-in Card */}
+                    <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-2xl mb-4">
+                            <QrCode className="w-8 h-8 text-gray-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Ready to Check In?</h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                            Scan your teacher's QR code to mark your attendance
+                        </p>
+                        <button
+                            onClick={handleScanToCheckIn}
+                            className="w-full max-w-sm mx-auto px-6 py-4 bg-black text-white text-base font-semibold rounded-full hover:bg-gray-800 transition-colors"
+                        >
+                            SCAN TO CHECK-IN
+                        </button>
+                    </div>
+
+                    {/* Attendance History */}
+                    <button
+                        onClick={handleAttendanceHistory}
+                        className="w-full bg-white rounded-2xl border border-gray-200 p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors"
+                    >
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Clock className="w-6 h-6 text-gray-600" />
+                        </div>
+                        <div className="text-left">
+                            <h3 className="text-base font-semibold text-gray-900">Attendance History</h3>
+                            <p className="text-sm text-gray-500">View your attendance records</p>
+                        </div>
+                    </button>
                 </main>
             </div>
         </>

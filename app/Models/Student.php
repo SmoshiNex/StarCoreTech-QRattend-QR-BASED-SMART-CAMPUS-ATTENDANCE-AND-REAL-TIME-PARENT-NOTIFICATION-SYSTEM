@@ -25,4 +25,9 @@ class Student extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    public function classes()
+    {
+        return $this->belongsToMany(TeacherClass::class, 'class_student', 'student_id', 'teacher_class_id');
+    }
 }

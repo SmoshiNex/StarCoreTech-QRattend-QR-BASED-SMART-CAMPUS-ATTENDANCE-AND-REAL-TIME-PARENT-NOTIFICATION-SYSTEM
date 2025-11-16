@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\TeacherPasswordResetController;
 use App\Http\Controllers\Auth\TeacherAuthController;
 use App\Http\Controllers\TeacherClassController;
+use App\Http\Controllers\StudentClassController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -44,6 +45,17 @@ Route::middleware('auth:teacher')->group(function () {
     Route::post('/teacher/classes', [TeacherClassController::class, 'store'])->name('teacher.classes.store');
     Route::patch('/teacher/classes/{class}', [TeacherClassController::class, 'update'])->name('teacher.classes.update');
     Route::delete('/teacher/classes/{class}', [TeacherClassController::class, 'destroy'])->name('teacher.classes.destroy');
+    Route::get('/teacher/classes/{class}/students', [TeacherClassController::class, 'getStudents'])->name('teacher.classes.students');
 });
+
+// Student Routes Group
+Route::middleware('auth:student')->group(function () {
+    // Class Registration
+    Route::get('/student/my-classes', [StudentClassController::class, 'myClasses'])->name('student.classes');
+    Route::post('/student/register-class/{class}', [StudentClassController::class, 'register'])->name('student.classes.register');
+});
+
+// Public route for QR code scanning (can be accessed before login)
+Route::get('/student/register-class/{class}', [StudentClassController::class, 'showRegistration'])->name('student.classes.show');
 
 require __DIR__.'/auth.php';

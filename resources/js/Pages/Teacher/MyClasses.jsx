@@ -5,13 +5,19 @@ import ClassCard from './MyClassesUI/ClassCard';
 import CreateClassModal from './MyClassesUI/CreateClassModal';
 import EditClassModal from './MyClassesUI/EditClassModal';
 import DeleteClassModal from './MyClassesUI/DeleteClassModal';
+import QRCodeModal from './MyClasses/QRCodeModal';
+import ViewStudentsModal from './MyClasses/ViewStudentsModal';
 import Header from './DashboardUI/Header';
+import axios from 'axios';
 
 export default function MyClasses({ classes }) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+    const [isViewStudentsModalOpen, setIsViewStudentsModalOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState(null);
+    const [enrolledStudents, setEnrolledStudents] = useState([]);
 
     const handleEdit = (classItem) => {
         setSelectedClass(classItem);
@@ -21,6 +27,22 @@ export default function MyClasses({ classes }) {
     const handleDelete = (classItem) => {
         setSelectedClass(classItem);
         setIsDeleteModalOpen(true);
+    };
+
+    const handleShowQR = (classItem) => {
+        setSelectedClass(classItem);
+        setIsQRModalOpen(true);
+    };
+
+    const handleViewStudents = async (classItem) => {
+        setSelectedClass(classItem);
+        try {
+            const response = await axios.get(`/teacher/classes/${classItem.id}/students`);
+            setEnrolledStudents(response.data);
+            setIsViewStudentsModalOpen(true);
+        } catch (error) {
+            console.error('Error fetching students:', error);
+        }
     };
 
     const confirmDelete = () => {
@@ -53,6 +75,8 @@ export default function MyClasses({ classes }) {
                                 classItem={classItem}
                                 onEdit={handleEdit}
                                 onDelete={handleDelete}
+                                onShowQR={handleShowQR}
+                                onViewStudents={handleViewStudents}
                             />
                         ))}
                     </div>
@@ -81,6 +105,26 @@ export default function MyClasses({ classes }) {
                 }}
                 classItem={selectedClass}
                 onConfirm={confirmDelete}
+            />
+
+            <QRCodeModal
+                isOpen={isQRModalOpen}
+                onClose={() => {
+                    setIsQRModalOpen(false);
+                    setSelectedClass(null);
+                }}
+                classItem={selectedClass}
+            />
+
+            <ViewStudentsModal
+                isOpen={isViewStudentsModalOpen}
+                onClose={() => {
+                    setIsViewStudentsModalOpen(false);
+                    setSelectedClass(null);
+                    setEnrolledStudents([]);
+                }}
+                classItem={selectedClass}
+                students={enrolledStudents}
             />
         </>
     );

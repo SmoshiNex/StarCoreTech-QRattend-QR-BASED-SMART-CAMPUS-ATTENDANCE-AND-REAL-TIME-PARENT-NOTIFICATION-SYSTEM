@@ -66,4 +66,16 @@ class TeacherClassController extends Controller
 
         return redirect()->back()->with('success', 'Class deleted successfully');
     }
+
+    public function getStudents(TeacherClass $class)
+    {
+        $this->authorize('update', $class);
+
+        $students = $class->students()
+            ->select('students.id', 'students.student_id', 'students.first_name', 'students.last_name')
+            ->orderBy('students.last_name')
+            ->get();
+
+        return response()->json($students);
+    }
 }

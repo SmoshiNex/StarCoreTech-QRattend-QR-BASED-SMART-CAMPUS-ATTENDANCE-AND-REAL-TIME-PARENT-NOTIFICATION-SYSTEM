@@ -20,5 +20,29 @@ class StudentSeeder extends Seeder
             'section' => 'A',
             'password' => Hash::make('password123'),
         ]);
+
+        Student::create([
+            'student_id' => '2021-00013',
+            'first_name' => 'Jane',
+            'last_name' => 'Smith',
+            'email' => 'jane.smith@student.wmsu.edu.ph',
+            'course' => 'BS IT',
+            'year_level' => '3rd Year',
+            'section' => 'A',
+            'password' => Hash::make('password123'),
+        ]);
+
+        Student::create([
+            'student_id' => '2021-00014',
+            'first_name' => 'Michael',
+            'last_name' => 'Johnson',
+            'email' => 'michael.j@student.wmsu.edu.ph',
+            'course' => 'BS IT',
+            'year_level' => '3rd Year',
+            'section' => 'A',
+            'password' => Hash::make('password123'),
+        ]);
     }
+    
+    
 }
