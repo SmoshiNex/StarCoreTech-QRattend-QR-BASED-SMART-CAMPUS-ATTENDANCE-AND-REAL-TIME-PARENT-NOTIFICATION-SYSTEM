@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "@inertiajs/react";
 
 export default function LoginModal() {
-  const [activeTab, setActiveTab] = useState("student");
+  const [activeTab, setActiveTab] = useState("teacher");
   const [teacherEmailError, setTeacherEmailError] = useState("");
   const [studentIdError, setStudentIdError] = useState("");
 
