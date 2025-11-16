@@ -47,11 +47,22 @@ class StudentClassController extends Controller
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'email' => $validated['parent_email'], // Store parent email
+                'course' => 'N/A', // Default value
+                'year_level' => 1, // Default value
+                'section' => 'N/A', // Default value
                 'password' => bcrypt($validated['password']),
             ]);
 
-            // Log the student in
-            Auth::guard('student')->login($student);
+            // Register student to class FIRST before logging in
+            $class->students()->attach($student->id);
+
+            // Log the student in with remember token
+            Auth::guard('student')->login($student, true);
+            
+            // Regenerate session to prevent session fixation
+            $request->session()->regenerate();
+            
+            return redirect()->route('student.dashboard')->with('success', 'Successfully registered for ' . $class->class_code);
         }
 
         // Check if already registered

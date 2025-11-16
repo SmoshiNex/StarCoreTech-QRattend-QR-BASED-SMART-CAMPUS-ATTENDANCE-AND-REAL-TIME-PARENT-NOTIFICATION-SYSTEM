@@ -22,4 +22,9 @@ class Teacher extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    public function classes()
+    {
+        return $this->hasMany(TeacherClass::class);
+    }
 }

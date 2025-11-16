@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\TeacherPasswordResetController;
 use App\Http\Controllers\Auth\TeacherAuthController;
 use App\Http\Controllers\TeacherClassController;
 use App\Http\Controllers\StudentClassController;
+use App\Http\Controllers\AttendanceController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -46,16 +47,22 @@ Route::middleware('auth:teacher')->group(function () {
     Route::patch('/teacher/classes/{class}', [TeacherClassController::class, 'update'])->name('teacher.classes.update');
     Route::delete('/teacher/classes/{class}', [TeacherClassController::class, 'destroy'])->name('teacher.classes.destroy');
     Route::get('/teacher/classes/{class}/students', [TeacherClassController::class, 'getStudents'])->name('teacher.classes.students');
+    
+    // Attendance
+    Route::post('/teacher/classes/{class}/attendance/start', [AttendanceController::class, 'startSession'])->name('teacher.attendance.start');
+    Route::post('/teacher/attendance/{session}/end', [AttendanceController::class, 'endSession'])->name('teacher.attendance.end');
+    Route::get('/teacher/attendance/{session}/live', [AttendanceController::class, 'getLiveAttendance'])->name('teacher.attendance.live');
 });
 
 // Student Routes Group
 Route::middleware('auth:student')->group(function () {
-    // Class Registration
+    // My Classes
     Route::get('/student/my-classes', [StudentClassController::class, 'myClasses'])->name('student.classes');
-    Route::post('/student/register-class/{class}', [StudentClassController::class, 'register'])->name('student.classes.register');
 });
 
-// Public route for QR code scanning (can be accessed before login)
+// Public routes for QR code scanning and class registration (can be accessed before login)
 Route::get('/student/register-class/{class}', [StudentClassController::class, 'showRegistration'])->name('student.classes.show');
+Route::post('/student/register-class/{class}', [StudentClassController::class, 'register'])->name('student.classes.register');
+Route::get('/attendance/scan/{session}', [AttendanceController::class, 'scanQR'])->name('attendance.scan');
 
 require __DIR__.'/auth.php';

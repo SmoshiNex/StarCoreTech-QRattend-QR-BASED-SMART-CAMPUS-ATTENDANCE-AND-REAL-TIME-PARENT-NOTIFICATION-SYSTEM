@@ -28,4 +28,16 @@ class TeacherClass extends Model
     {
         return $this->belongsToMany(Student::class, 'class_student')->withTimestamps();
     }
+
+    public function attendanceSessions()
+    {
+        return $this->hasMany(AttendanceSession::class);
+    }
+
+    public function activeAttendanceSession()
+    {
+        return $this->hasOne(AttendanceSession::class)
+            ->where('status', 'active')
+            ->latest();
+    }
 }
