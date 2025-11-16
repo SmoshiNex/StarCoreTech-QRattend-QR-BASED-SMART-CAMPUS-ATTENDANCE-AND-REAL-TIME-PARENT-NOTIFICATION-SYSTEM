@@ -2,7 +2,7 @@ import { Button } from "@/Components/ui/button";
 import { Card } from "@/Components/ui/card";
 import { Edit, Trash2, Eye } from 'lucide-react';
 
-export default function ClassCard({ classItem, onEdit, onDelete, onShowQR, onViewStudents }) {
+export default function ClassCard({ classItem, onEdit, onDelete, onShowQR, onViewStudents, onStartAttendance }) {
     return (
         <Card className="p-6 bg-white">
             <div className="flex justify-between items-start mb-4">
@@ -55,7 +55,7 @@ export default function ClassCard({ classItem, onEdit, onDelete, onShowQR, onVie
                 <Button variant="outline" className="w-full" onClick={() => onShowQR(classItem)}>
                     Registration QR
                 </Button>
-                <Button className="w-full">
+                <Button className="w-full" onClick={() => onStartAttendance(classItem)}>
                     Start Attendance
                 </Button>
             </div>

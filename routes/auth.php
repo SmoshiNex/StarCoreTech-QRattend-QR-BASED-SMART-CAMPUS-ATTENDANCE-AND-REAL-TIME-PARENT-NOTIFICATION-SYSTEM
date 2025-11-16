@@ -22,21 +22,13 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    // Student routes
+    // Student login (guest only)
     Route::post('student/login', [StudentAuthController::class, 'login'])
         ->name('student.login');
-    Route::get('student/dashboard', [StudentAuthController::class, 'dashboard'])
-        ->name('student.dashboard');
-    Route::post('student/logout', [StudentAuthController::class, 'logout'])
-        ->name('student.logout');
 
-    // Teacher routes
+    // Teacher login (guest only)
     Route::post('teacher/login', [TeacherAuthController::class, 'login'])
         ->name('teacher.login');
-    Route::get('teacher/dashboard', [TeacherAuthController::class, 'dashboard'])
-        ->name('teacher.dashboard');
-    Route::post('teacher/logout', [TeacherAuthController::class, 'logout'])
-        ->name('teacher.logout');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
@@ -49,6 +41,22 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+});
+
+// Student protected routes
+Route::middleware('auth:student')->group(function () {
+    Route::get('student/dashboard', [StudentAuthController::class, 'dashboard'])
+        ->name('student.dashboard');
+    Route::post('student/logout', [StudentAuthController::class, 'logout'])
+        ->name('student.logout');
+});
+
+// Teacher protected routes
+Route::middleware('auth:teacher')->group(function () {
+    Route::get('teacher/dashboard', [TeacherAuthController::class, 'dashboard'])
+        ->name('teacher.dashboard');
+    Route::post('teacher/logout', [TeacherAuthController::class, 'logout'])
+        ->name('teacher.logout');
 });
 
 Route::middleware('auth')->group(function () {

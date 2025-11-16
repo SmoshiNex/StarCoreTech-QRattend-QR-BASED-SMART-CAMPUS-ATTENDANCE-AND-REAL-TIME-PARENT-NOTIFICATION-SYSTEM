@@ -1,12 +1,23 @@
 import { Button } from "@/Components/ui/button";
 import { Card } from "@/Components/ui/card";
 
-export default function ClassCard({ classItem }) {
+export default function ClassCard({ classItem, onStartAttendance }) {
     return (
         <Card className="p-6">
             <div className="flex justify-between items-start mb-4">
-                <div>
-                    <h3 className="text-lg font-bold">{classItem.code}</h3>
+                <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold">{classItem.code}</h3>
+                        {classItem.status && (
+                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                classItem.status === 'active' 
+                                    ? 'bg-green-100 text-green-700' 
+                                    : 'bg-gray-100 text-gray-700'
+                            }`}>
+                                {classItem.status === 'active' ? 'Active' : 'Ended'}
+                            </span>
+                        )}
+                    </div>
                     <p className="text-gray-600">{classItem.name}</p>
                     <div className="flex items-center mt-2 text-sm text-gray-500">
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -15,7 +26,11 @@ export default function ClassCard({ classItem }) {
                         {classItem.time}
                     </div>
                 </div>
-                <Button variant="outline" className="hover:bg-black hover:text-white">
+                <Button 
+                    variant="outline" 
+                    className="hover:bg-black hover:text-white"
+                    onClick={() => onStartAttendance(classItem)}
+                >
                     Start Attendance
                 </Button>
             </div>

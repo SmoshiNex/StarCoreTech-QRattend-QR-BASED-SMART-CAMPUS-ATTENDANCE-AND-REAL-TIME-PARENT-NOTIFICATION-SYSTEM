@@ -7,6 +7,7 @@ import EditClassModal from './MyClassesUI/EditClassModal';
 import DeleteClassModal from './MyClassesUI/DeleteClassModal';
 import QRCodeModal from './MyClasses/QRCodeModal';
 import ViewStudentsModal from './MyClasses/ViewStudentsModal';
+import LiveAttendanceModal from './MyClassesUI/LiveAttendanceModal';
 import Header from './DashboardUI/Header';
 import axios from 'axios';
 
@@ -16,6 +17,7 @@ export default function MyClasses({ classes }) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isQRModalOpen, setIsQRModalOpen] = useState(false);
     const [isViewStudentsModalOpen, setIsViewStudentsModalOpen] = useState(false);
+    const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState(null);
     const [enrolledStudents, setEnrolledStudents] = useState([]);
 
@@ -43,6 +45,11 @@ export default function MyClasses({ classes }) {
         } catch (error) {
             console.error('Error fetching students:', error);
         }
+    };
+
+    const handleStartAttendance = (classItem) => {
+        setSelectedClass(classItem);
+        setIsAttendanceModalOpen(true);
     };
 
     const confirmDelete = () => {
@@ -77,6 +84,7 @@ export default function MyClasses({ classes }) {
                                 onDelete={handleDelete}
                                 onShowQR={handleShowQR}
                                 onViewStudents={handleViewStudents}
+                                onStartAttendance={handleStartAttendance}
                             />
                         ))}
                     </div>
@@ -125,6 +133,15 @@ export default function MyClasses({ classes }) {
                 }}
                 classItem={selectedClass}
                 students={enrolledStudents}
+            />
+
+            <LiveAttendanceModal
+                isOpen={isAttendanceModalOpen}
+                onClose={() => {
+                    setIsAttendanceModalOpen(false);
+                    setSelectedClass(null);
+                }}
+                classData={selectedClass}
             />
         </>
     );
