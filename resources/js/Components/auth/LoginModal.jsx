@@ -33,12 +33,7 @@ export default function LoginModal() {
       setTeacherEmailError("Email is required.");
       return false;
     }
-    const hasDigits = /\d/.test(value);
     const isWmsu = !/@wmsu\.edu\.ph$/i.test(value);
-    if (hasDigits) {
-      setTeacherEmailError("Email cannot contain numbers, Please use your wmsu.edu.ph email address.");
-      return false;
-    }
 
     if (isWmsu) {
       setTeacherEmailError("Please use your WMSU email address.");
@@ -49,25 +44,45 @@ export default function LoginModal() {
   };
 
   
-  const { data: studentData, setData: setStudentData, post: studentPost } = useForm({
+  const {
+    data: studentData,
+    setData: setStudentData,
+    post: studentPost,
+    processing: studentProcessing,
+    errors: studentErrors,
+  } = useForm({
     student_id: "",
     password:"",
   });
 
-  const { data: teacherData, setData: setTeacherData, post: teacherPost } = useForm({
+  const {
+    data: teacherData,
+    setData: setTeacherData,
+    post: teacherPost,
+    processing: teacherProcessing,
+    errors: teacherErrors,
+  } = useForm({
     email: "",
     password: "",
   });
 
   const handleStudentSubmit = (e) => {
     e.preventDefault();
-    studentPost(route("student.login"));
+    if (!validateStudentId(studentData.student_id)) return;
+    studentPost(route("student.login"), {
+      preserveScroll: true,
+    });
   };
 
   const handleTeacherSubmit = (e) => {
     e.preventDefault();
     if (!validateTeacherEmail(teacherData.email)) return;
-    teacherPost(route("teacher.login"));
+    teacherPost(route("teacher.login"), {
+      preserveScroll: true,
+      onError: () => {
+        // keep validation errors visible
+      },
+    });
   };
 
 
@@ -116,8 +131,10 @@ export default function LoginModal() {
                 className="border rounded-lg p-3"
                 required
               />
-              {teacherEmailError && (
-                <p className="text-sm text-red-600">{teacherEmailError}</p>
+              {(teacherEmailError || teacherErrors.email) && (
+                <p className="text-sm text-red-600">
+                  {teacherEmailError || teacherErrors.email}
+                </p>
               )}
               <Input
                 type="password"
@@ -132,11 +149,15 @@ export default function LoginModal() {
                   Forgot password?
                 </a>
               </div>
+              {teacherErrors.password && (
+                <p className="text-sm text-red-600">{teacherErrors.password}</p>
+              )}
               <Button 
                 type="submit" 
-                className="w-full bg-black text-white rounded-lg p-3 uppercase"
+                className="w-full bg-black text-white rounded-lg p-3 uppercase disabled:opacity-70"
+                disabled={teacherProcessing}
               >
-                Login
+                {teacherProcessing ? "logging in..." : "Login"}
               </Button>
             </form>
           </TabsContent>
@@ -155,8 +176,10 @@ export default function LoginModal() {
                 className="border rounded-lg p-3"
                 required
               />
-              {studentIdError && (
-                <p className="text-sm text-red-600">{studentIdError}</p>
+              {(studentIdError || studentErrors.student_id) && (
+                <p className="text-sm text-red-600">
+                  {studentIdError || studentErrors.student_id}
+                </p>
               )}
               <Input
                 type="password"
@@ -166,11 +189,15 @@ export default function LoginModal() {
                 className="border rounded-lg p-3"
                 required
               />
+              {studentErrors.password && (
+                <p className="text-sm text-red-600">{studentErrors.password}</p>
+              )}
               <Button 
                 type="submit" 
-                className="w-full bg-black text-white rounded-lg p-3 uppercase"
+                className="w-full bg-black text-white rounded-lg p-3 uppercase disabled:opacity-70"
+                disabled={studentProcessing}
               >
-                Login
+                {studentProcessing ? "logging in..." : "Login"}
               </Button>
             </form>
           </TabsContent>

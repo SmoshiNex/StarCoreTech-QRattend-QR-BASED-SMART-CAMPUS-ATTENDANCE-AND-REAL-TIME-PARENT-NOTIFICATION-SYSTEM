@@ -46,7 +46,7 @@ class TeacherPasswordResetController extends Controller
         $teacher->password = Hash::make($request->password);
         $teacher->save();
 
-        return redirect()->route('teacher.login')
+        return redirect()->route('teacher.login.page')
             ->with('status', 'Your password has been reset successfully.');
     }
 }

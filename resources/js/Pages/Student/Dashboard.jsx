@@ -1,19 +1,43 @@
 import { Head, router } from '@inertiajs/react';
 import { User, QrCode, Clock } from 'lucide-react';
 import { useState } from 'react';
-
+import QRScannerModal from './QRScannerModal';
+import CheckInSuccessModal from '@/Components/modals/CheckInSuccessModal';
 
 export default function StudentDashboard({ student, enrolledClasses = 4, attendanceRate = 95 }) {
     const [showQRScanner, setShowQRScanner] = useState(false);
+    const [successModal, setSuccessModal] = useState({
+        open: false,
+        details: {},
+    });
 
     const handleLogout = () => {
         router.post('/logout');
     };
 
+    const handleScanSuccess = (details) => {
+        setShowQRScanner(false);
+        // Use details from API response (includes real scan time and student info)
+        setSuccessModal({
+            open: true,
+            details: {
+                ...details,
+                // Fallback to student from props if not in details
+                studentName: details.studentName || `${student.first_name} ${student.last_name}`,
+                studentId: details.studentId || student.student_id,
+            },
+        });
+    };
+
+    const handleSuccessClose = () => {
+        setSuccessModal({
+            open: false,
+            details: {},
+        });
+    };
+
     const handleScanToCheckIn = () => {
         setShowQRScanner(true);
-        // In a real app, this would open the camera to scan QR code
-        alert('QR Scanner would open here. For now, redirect to QR scan page.');
     };
 
     const handleAttendanceHistory = () => {
@@ -111,6 +135,19 @@ export default function StudentDashboard({ student, enrolledClasses = 4, attenda
                     </button>
                 </main>
             </div>
+
+            <QRScannerModal
+                open={showQRScanner}
+                onClose={() => setShowQRScanner(false)}
+                onSuccess={handleScanSuccess}
+            />
+
+            <CheckInSuccessModal
+                open={successModal.open}
+                onClose={handleSuccessClose}
+                details={successModal.details}
+                onBackToDashboard={handleSuccessClose}
+            />
         </>
     );
 }

@@ -15,9 +15,7 @@ class TeacherClassController extends Controller
     {
         $teacher = Auth::guard('teacher')->user();
         $classes = TeacherClass::where('teacher_id', $teacher->id)
-            ->withCount(['students as students_enrolled' => function($query) {
-                $query->whereNotNull('class_student.student_id');
-            }])
+            ->withCount('students as students_enrolled')
             ->get();
 
         return Inertia::render('Teacher/MyClasses', [
@@ -77,5 +75,20 @@ class TeacherClassController extends Controller
             ->get();
 
         return response()->json($students);
+    }
+
+    public function getActiveSession(TeacherClass $class)
+    {
+        $this->authorize('update', $class);
+
+        $session = $class->attendanceSessions()
+            ->where('status', 'active')
+            ->where('ends_at', '>', now())
+            ->latest()
+            ->first();
+
+        return response()->json([
+            'session' => $session,
+        ]);
     }
 }

@@ -20,7 +20,7 @@ export default function TeacherDashboard({ teacher, stats }) {
             <Head title="Dashboard" />
 
             <div className="min-h-screen bg-gray-100">
-                <Header />
+                <Header active="dashboard" />
 
                 <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                     <WelcomeSection teacherFirstName={teacher.first_name} teacherLastName={teacher.last_name}/>

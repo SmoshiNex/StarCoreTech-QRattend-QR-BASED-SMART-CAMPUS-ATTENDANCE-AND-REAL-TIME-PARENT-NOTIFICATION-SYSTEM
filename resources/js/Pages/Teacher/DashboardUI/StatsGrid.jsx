@@ -41,11 +41,11 @@ export default function StatsGrid({ stats }) {
     ];
 
     return (
-        <div className="grid grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-8">
             {statItems.map((item, index) => (
-                <Card key={index} className="p-6">
+                <Card key={index} className="p-5 h-full">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gray-100 rounded-lg">
+                        <div className="p-3 bg-gray-100 rounded-lg shrink-0">
                             {item.icon}
                         </div>
                         <div>

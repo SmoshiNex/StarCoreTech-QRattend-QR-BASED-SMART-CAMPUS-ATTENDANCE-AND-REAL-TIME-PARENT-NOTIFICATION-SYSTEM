@@ -64,13 +64,13 @@ export default function MyClasses({ classes }) {
     return (
         <>
             <Head title="My Classes" />
-            <Header/>
+            <Header active="classes" />
 
             <div className="min-h-screen bg-gray-100 py-6">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center mb-6">
                         <h1 className="text-2xl font-bold">My Classes</h1>
-                        <Button onClick={() => setIsCreateModalOpen(true)}>
+                        <Button onClick={() => setIsCreateModalOpen(true)} className="bg-black hover:bg-gray-900 text-white">
                             + Create New Class
                         </Button>
                     </div>

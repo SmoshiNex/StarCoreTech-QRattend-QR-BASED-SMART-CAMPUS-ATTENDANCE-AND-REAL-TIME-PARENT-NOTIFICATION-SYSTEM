@@ -90,7 +90,7 @@ export default function CreateClassModal({ isOpen, onClose }) {
                         <Button type="button" variant="outline" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={processing}>
+                        <Button className="bg-black hover:bg-gray-900 text-white" type="submit" disabled={processing}>
                             Create Class
                         </Button>
                     </div>

@@ -61,7 +61,14 @@ class StudentClassController extends Controller
             
             // Regenerate session to prevent session fixation
             $request->session()->regenerate();
-            
+
+            // If this registration was triggered by scanning a QR code, redirect
+            // back to the attendance scan route so the student is actually marked present/late.
+            $attendanceSessionId = $request->session()->pull('attendance_session_id');
+            if ($attendanceSessionId) {
+                return redirect()->route('attendance.scan', $attendanceSessionId);
+            }
+
             return redirect()->route('student.dashboard')->with('success', 'Successfully registered for ' . $class->class_code);
         }
 

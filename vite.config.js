@@ -16,4 +16,14 @@ export default defineConfig({
             '@': path.resolve(__dirname, './resources/js'),
         },
     },
+    server: {
+        host: true,
+        port: 5173,
+        strictPort: true,
+        hmr: {
+            host: '192.168.43.35', // my PC IP inside hotspot to connect on mobile phone
+            protocol: 'ws',
+            port: 5173,
+        },
+    },
 });

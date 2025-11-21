@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Teacher;
+use App\Models\AttendanceRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -55,23 +56,32 @@ class TeacherAuthController extends Controller
         })->count();
         
         // Calculate present and absent counts
-        $presentToday = 0;
+        // NOTE: Only count absent students after a session has ENDED.
+        // Students who checked in should NEVER be counted as absent
+        $presentToday = AttendanceRecord::query()
+            ->whereDate('checked_in_at', now()->toDateString())
+            ->whereHas('session.teacherClass', function ($query) use ($teacher) {
+                $query->where('teacher_id', $teacher->id);
+            })
+            ->count();
+        // Absent tracking will be added when late/absent flows are finalized.
         $absentToday = 0;
-        
-        foreach ($classes as $class) {
-            $todaySessionForClass = $class->attendanceSessions->first();
-            if ($todaySessionForClass) {
-                $presentToday += $todaySessionForClass->records->count();
-                $absentToday += ($class->students->count() - $todaySessionForClass->records->count());
-            }
-        }
 
         // Format classes for display
         $formattedClasses = $classes->map(function($class) {
             $todaySession = $class->attendanceSessions->first();
             $totalStudents = $class->students->count();
             $present = $todaySession ? $todaySession->records->count() : 0;
-            $absent = $totalStudents - $present;
+
+            // Only show absences once the session has ended
+            // AND only count students who did NOT check in
+            if ($todaySession && $todaySession->status === 'ended') {
+                $checkedInStudentIds = $todaySession->records->pluck('student_id')->toArray();
+                // Count only enrolled students who did NOT check in
+                $absent = $class->students->whereNotIn('id', $checkedInStudentIds)->count();
+            } else {
+                $absent = 0;
+            }
             
             // Calculate the actual end time based on duration_minutes
             $timeDisplay = 'No session today';

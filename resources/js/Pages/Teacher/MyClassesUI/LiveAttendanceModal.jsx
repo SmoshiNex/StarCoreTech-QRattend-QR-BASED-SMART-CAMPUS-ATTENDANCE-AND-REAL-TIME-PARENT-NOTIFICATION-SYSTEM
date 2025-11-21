@@ -191,21 +191,37 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
                         </div>
 
                         {/* Stats */}
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-4 gap-3">
                             <div className="bg-gray-100 rounded-lg p-4 text-center">
                                 <Users className="w-5 h-5 mx-auto mb-1 text-gray-600" />
                                 <div className="text-2xl font-bold">{stats.total}</div>
                                 <p className="text-xs text-gray-600">Total</p>
                             </div>
-                            <div className="bg-green-100 rounded-lg p-4 text-center">
-                                <UserCheck className="w-5 h-5 mx-auto mb-1 text-green-600" />
-                                <div className="text-2xl font-bold text-green-600">{stats.present}</div>
-                                <p className="text-xs text-gray-600">Present</p>
+                            <div
+                                className="rounded-lg p-4 text-center"
+                                style={{ backgroundColor: '#B9F8CF' }}
+                            >
+                                <UserCheck className="w-5 h-5 mx-auto mb-1 text-gray-800" />
+                                <div className="text-2xl font-bold text-gray-900">{stats.present}</div>
+                                <p className="text-xs text-gray-700">Present</p>
                             </div>
-                            <div className="bg-yellow-100 rounded-lg p-4 text-center">
-                                <UserX className="w-5 h-5 mx-auto mb-1 text-yellow-600" />
-                                <div className="text-2xl font-bold text-yellow-600">{stats.late}</div>
-                                <p className="text-xs text-gray-600">Late</p>
+                            <div
+                                className="rounded-lg p-4 text-center"
+                                style={{ backgroundColor: '#FFF085' }}
+                            >
+                                <UserX className="w-5 h-5 mx-auto mb-1 text-gray-800" />
+                                <div className="text-2xl font-bold text-gray-900">{stats.late}</div>
+                                <p className="text-xs text-gray-700">Late</p>
+                            </div>
+                            <div
+                                className="rounded-lg p-4 text-center"
+                                style={{ backgroundColor: '#FFC9C9' }}
+                            >
+                                <UserX className="w-5 h-5 mx-auto mb-1 text-gray-800" />
+                                <div className="text-2xl font-bold text-gray-900">
+                                    {Math.max(0, stats.total - stats.present - stats.late)}
+                                </div>
+                                <p className="text-xs text-gray-700">Absent</p>
                             </div>
                         </div>
 
@@ -241,12 +257,19 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-xs text-gray-600">{record.checked_in_at}</p>
-                                                    <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                                        record.status === 'present' 
-                                                            ? 'bg-green-100 text-green-700' 
-                                                            : 'bg-yellow-100 text-yellow-700'
-                                                    }`}>
-                                                        {record.status.toUpperCase()}
+                                                    <span
+                                                        className="text-xs font-semibold px-2 py-1 rounded"
+                                                        style={{
+                                                            backgroundColor:
+                                                                record.status === 'present'
+                                                                    ? '#B9F8CF'
+                                                                    : record.status === 'late'
+                                                                    ? '#FFF085'
+                                                                    : '#FFC9C9',
+                                                            color: record.status === 'present' ? '#064e3b' : '#111827',
+                                                        }}
+                                                    >
+                                                        {record.status === 'present' ? 'PRESENT' : record.status === 'late' ? 'LATE' : 'ABSENT'}
                                                     </span>
                                                 </div>
                                             </div>

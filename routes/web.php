@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\TeacherAuthController;
 use App\Http\Controllers\TeacherClassController;
 use App\Http\Controllers\StudentClassController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\ReportsController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -27,8 +28,13 @@ Route::middleware('auth')->group(function () {
 // Teacher Routes
 Route::get('/teacher/login', function() {
     return redirect('/')->with('tab', 'teacher');
-})->name('teacher.login');
+})->name('teacher.login.page');
 Route::post('/teacher/login', [TeacherAuthController::class, 'login'])->name('teacher.post.login');
+
+// Student redirect helper
+Route::get('/student/login', function() {
+    return redirect('/')->with('tab', 'student');
+})->name('student.login.page');
 
 // Teacher Password Reset Routes
 Route::get('/teacher/reset-password', [TeacherPasswordResetController::class, 'showResetForm'])
@@ -47,11 +53,16 @@ Route::middleware('auth:teacher')->group(function () {
     Route::patch('/teacher/classes/{class}', [TeacherClassController::class, 'update'])->name('teacher.classes.update');
     Route::delete('/teacher/classes/{class}', [TeacherClassController::class, 'destroy'])->name('teacher.classes.destroy');
     Route::get('/teacher/classes/{class}/students', [TeacherClassController::class, 'getStudents'])->name('teacher.classes.students');
+    Route::get('/teacher/classes/{class}/active-session', [TeacherClassController::class, 'getActiveSession'])->name('teacher.classes.active-session');
     
     // Attendance
     Route::post('/teacher/classes/{class}/attendance/start', [AttendanceController::class, 'startSession'])->name('teacher.attendance.start');
     Route::post('/teacher/attendance/{session}/end', [AttendanceController::class, 'endSession'])->name('teacher.attendance.end');
     Route::get('/teacher/attendance/{session}/live', [AttendanceController::class, 'getLiveAttendance'])->name('teacher.attendance.live');
+    
+    // Reports routes
+    Route::get('/teacher/reports', [ReportsController::class, 'index'])->name('teacher.reports');
+    Route::get('/teacher/reports/export', [ReportsController::class, 'export'])->name('teacher.reports.export');
 });
 
 // Student Routes Group
