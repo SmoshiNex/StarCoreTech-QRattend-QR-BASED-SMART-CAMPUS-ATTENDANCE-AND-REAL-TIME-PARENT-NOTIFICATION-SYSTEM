@@ -6,6 +6,8 @@ use App\Models\AttendanceSession;
 use App\Models\AttendanceRecord;
 use App\Models\TeacherClass;
 use App\Models\Student;
+use App\Models\NotificationLog;
+use App\Services\EmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -19,7 +21,7 @@ class AttendanceController extends Controller
     public function startSession(Request $request, TeacherClass $class)
     {
         $validated = $request->validate([
-            'duration_minutes' => 'required|integer|min:1|max:60',
+            'duration_minutes' => 'required|integer|min:1|max:180', // Allow up to 3 hours (180 minutes)
         ]);
 
         // End any active sessions for this class
@@ -52,15 +54,131 @@ class AttendanceController extends Controller
      */
     public function endSession(AttendanceSession $session)
     {
-        $session->update([
-            'status' => 'ended',
-            'ended_at' => now(),
-        ]);
+        try {
+            // Update session status
+            $session->update([
+                'status' => 'ended',
+                'ended_at' => now(),
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Attendance session ended',
-        ]);
+            // Reload session with relationships
+            $session->load('teacherClass.students');
+
+            // Get all enrolled students for this class
+            $enrolledStudents = $session->teacherClass->students;
+            
+            // Get all students who have checked in (have attendance records)
+            $checkedInStudentIds = $session->records()
+                ->pluck('student_id')
+                ->toArray();
+            
+            // Get class name for notifications
+            $className = $session->teacherClass->class_name 
+                ?? ($session->teacherClass->class_code && $session->teacherClass->subject_name 
+                    ? $session->teacherClass->class_code . ' - ' . $session->teacherClass->subject_name
+                    : ($session->teacherClass->subject_name ?? $session->teacherClass->class_code ?? 'Unknown Class'));
+            
+            $teacherId = $session->teacherClass->teacher_id;
+            $emailService = new EmailService();
+            $absentCount = 0;
+            
+            // Mark absent students who didn't check in
+            foreach ($enrolledStudents as $student) {
+                if (!in_array($student->id, $checkedInStudentIds)) {
+                    try {
+                        // Create absent record
+                        AttendanceRecord::create([
+                            'attendance_session_id' => $session->id,
+                            'student_id' => $student->id,
+                            'checked_in_at' => null, // No check-in time for absent students
+                            'status' => 'absent',
+                        ]);
+                        
+                        $absentCount++;
+                        $studentName = $student->first_name . ' ' . $student->last_name;
+                        
+                        // Send email notification to parent if parent_email is set
+                        if ($student->parent_email) {
+                            try {
+                                $emailService->sendParentNotification(
+                                    $student->parent_email,
+                                    $studentName,
+                                    'absent',
+                                    $className,
+                                    null, // No check-in time for absent
+                                    $student->id,
+                                    $teacherId
+                                );
+                            } catch (\Exception $e) {
+                                // Log email error but continue processing
+                                \Log::error('Failed to send absent email notification: ' . $e->getMessage());
+                            }
+                        }
+                        
+                        // Log attendance notification for student
+                        try {
+                            NotificationLog::create([
+                                'user_type' => 'student',
+                                'user_id' => $student->id,
+                                'type' => 'attendance',
+                                'title' => 'Attendance Recorded',
+                                'message' => "You have been marked as absent for {$className}.",
+                                'metadata' => [
+                                    'class_name' => $className,
+                                    'status' => 'absent',
+                                    'checked_in_at' => null,
+                                ],
+                                'status' => 'success',
+                            ]);
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to create student notification log: ' . $e->getMessage());
+                        }
+                        
+                        // Log attendance notification for teacher
+                        try {
+                            NotificationLog::create([
+                                'user_type' => 'teacher',
+                                'user_id' => $teacherId,
+                                'type' => 'attendance',
+                                'title' => 'Student Absent',
+                                'message' => "{$studentName} was marked as absent for {$className}.",
+                                'metadata' => [
+                                    'student_name' => $studentName,
+                                    'student_id' => $student->student_id,
+                                    'class_name' => $className,
+                                    'status' => 'absent',
+                                ],
+                                'status' => 'success',
+                            ]);
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to create teacher notification log: ' . $e->getMessage());
+                        }
+                    } catch (\Exception $e) {
+                        // Log error for this student but continue with others
+                        \Log::error('Failed to mark student as absent: ' . $e->getMessage(), [
+                            'student_id' => $student->id,
+                            'session_id' => $session->id,
+                        ]);
+                    }
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Attendance session ended' . ($absentCount > 0 ? " - {$absentCount} student(s) marked as absent" : ''),
+                'absent_count' => $absentCount,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to end attendance session: ' . $e->getMessage(), [
+                'session_id' => $session->id,
+                'error' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to end session: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -70,40 +188,57 @@ class AttendanceController extends Controller
     {
         $timezone = config('app.timezone', 'UTC');
         
-        $records = $session->records()
+        // Get all enrolled students
+        $enrolledStudents = $session->teacherClass->students()
+            ->select('students.id', 'students.student_id', 'students.first_name', 'students.last_name')
+            ->orderBy('students.last_name')
+            ->get();
+        
+        // Get attendance records
+        $attendanceRecords = $session->records()
             ->with('student:id,student_id,first_name,last_name')
-            ->orderBy('checked_in_at', 'asc')
             ->get()
-            ->map(function ($record) use ($timezone) {
-                // Convert to app timezone before formatting to ensure correct time display
-                $checkedInAt = Carbon::parse($record->checked_in_at)
-                    ->setTimezone($timezone);
-
-                // For now, treat 'late' the same as 'present' in the live view.
-                // This keeps the UI simple until separate LATE/ABSENT flows are implemented.
-                $normalizedStatus = $record->status === 'late' ? 'present' : $record->status;
-                
+            ->keyBy('student_id');
+        
+        // Combine enrolled students with their attendance status
+        $allStudents = $enrolledStudents->map(function ($student) use ($attendanceRecords, $timezone) {
+            $record = $attendanceRecords->get($student->id);
+            
+            if ($record) {
+                $checkedInAt = Carbon::parse($record->checked_in_at)->setTimezone($timezone);
                 return [
-                    'id' => $record->id,
-                    'student_id' => $record->student->student_id,
-                    'student_name' => $record->student->first_name . ' ' . $record->student->last_name,
+                    'id' => $student->id,
+                    'student_id' => $student->student_id,
+                    'student_name' => $student->first_name . ' ' . $student->last_name,
                     'checked_in_at' => $checkedInAt->format('g:i:s A'),
-                    'status' => $normalizedStatus,
+                    'status' => $record->status, // 'present' or 'late'
+                    'has_checked_in' => true,
                 ];
-            });
+            } else {
+                return [
+                    'id' => $student->id,
+                    'student_id' => $student->student_id,
+                    'student_name' => $student->first_name . ' ' . $student->last_name,
+                    'checked_in_at' => null,
+                    'status' => 'absent',
+                    'has_checked_in' => false,
+                ];
+            }
+        });
 
-        $totalEnrolled = $session->teacherClass->students()->count();
-        $presentCount = $records->where('status', 'present')->count();
-        // We are not surfacing LATE yet in the UI; treat them as PRESENT for counts as well.
-        $lateCount = 0;
+        $totalEnrolled = $enrolledStudents->count();
+        $presentCount = $allStudents->where('status', 'present')->count();
+        $lateCount = $allStudents->where('status', 'late')->count();
+        $absentCount = $allStudents->where('status', 'absent')->count();
 
         return response()->json([
             'session' => $session,
-            'records' => $records,
+            'records' => $allStudents->values(), // All students with their status
             'stats' => [
                 'total' => $totalEnrolled,
                 'present' => $presentCount,
                 'late' => $lateCount,
+                'absent' => $absentCount,
             ],
         ]);
     }
@@ -233,6 +368,66 @@ class AttendanceController extends Controller
             'student_id' => $student->id,
             'checked_in_at' => $checkInTime,
             'status' => $status,
+        ]);
+
+        // Send email notification to parent if parent_email is set
+        if ($student->parent_email) {
+            $emailService = new EmailService();
+            $studentName = $student->first_name . ' ' . $student->last_name;
+            $className = $session->teacherClass->class_name 
+                ?? ($session->teacherClass->class_code && $session->teacherClass->subject_name 
+                    ? $session->teacherClass->class_code . ' - ' . $session->teacherClass->subject_name
+                    : ($session->teacherClass->subject_name ?? $session->teacherClass->class_code ?? 'Unknown Class'));
+            $checkInTimeFormatted = $checkInTime->format('g:i A');
+            $teacherId = $session->teacherClass->teacher_id;
+
+            $emailService->sendParentNotification(
+                $student->parent_email,
+                $studentName,
+                $status,
+                $className,
+                $checkInTimeFormatted,
+                $student->id,
+                $teacherId
+            );
+        }
+
+        // Get class name for notifications
+        $className = $session->teacherClass->class_name 
+            ?? ($session->teacherClass->class_code && $session->teacherClass->subject_name 
+                ? $session->teacherClass->class_code . ' - ' . $session->teacherClass->subject_name
+                : ($session->teacherClass->subject_name ?? $session->teacherClass->class_code ?? 'Unknown Class'));
+
+        // Log attendance notification for student
+        NotificationLog::create([
+            'user_type' => 'student',
+            'user_id' => $student->id,
+            'type' => 'attendance',
+            'title' => 'Attendance Recorded',
+            'message' => "You have been marked as {$status} for {$className}.",
+            'metadata' => [
+                'class_name' => $className,
+                'status' => $status,
+                'checked_in_at' => $checkInTime->toDateTimeString(),
+            ],
+            'status' => 'success',
+        ]);
+
+        // Log attendance notification for teacher
+        NotificationLog::create([
+            'user_type' => 'teacher',
+            'user_id' => $session->teacherClass->teacher_id,
+            'type' => 'attendance',
+            'title' => 'Student Checked In',
+            'message' => "{$student->first_name} {$student->last_name} has checked in as {$status}.",
+            'metadata' => [
+                'student_name' => $student->first_name . ' ' . $student->last_name,
+                'student_id' => $student->student_id,
+                'class_name' => $className,
+                'status' => $status,
+                'checked_in_at' => $checkInTime->toDateTimeString(),
+            ],
+            'status' => 'success',
         ]);
 
         // Return JSON for API calls, Inertia for direct page visits

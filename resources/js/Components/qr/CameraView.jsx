@@ -8,6 +8,8 @@ export default function CameraView({ videoRef, isScanning, error }) {
                     autoPlay
                     playsInline
                     muted
+                    webkit-playsinline="true"
+                    x5-playsinline="true"
                 />
                 {!isScanning && !error && (
                     <span className="absolute text-xs text-gray-300">
@@ -15,9 +17,11 @@ export default function CameraView({ videoRef, isScanning, error }) {
                     </span>
                 )}
                 {error && (
-                    <span className="absolute text-xs text-red-300 text-center px-4">
-                        {error}
-                    </span>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 p-4">
+                        <div className="text-xs text-red-300 text-center whitespace-pre-line max-w-full">
+                            {error}
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

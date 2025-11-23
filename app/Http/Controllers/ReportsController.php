@@ -99,7 +99,14 @@ class ReportsController extends Controller
         if ($date) {
             try {
                 $parsedDate = Carbon::parse($date)->format('Y-m-d');
-                $query->whereDate('checked_in_at', $parsedDate);
+                // For absent records, checked_in_at is null, so filter by session started_at
+                // For present/late records, filter by checked_in_at
+                $query->where(function($q) use ($parsedDate) {
+                    $q->whereDate('checked_in_at', $parsedDate)
+                      ->orWhereHas('session', function($sessionQuery) use ($parsedDate) {
+                          $sessionQuery->whereDate('started_at', $parsedDate);
+                      });
+                });
             } catch (\Exception $e) {
                 // If date parsing fails, skip date filter
             }
@@ -109,15 +116,19 @@ class ReportsController extends Controller
             $checkedInAt = $record->checked_in_at 
                 ? $record->checked_in_at->toIso8601String() 
                 : null;
-
             
-            // Late records are normalized to 'present' because we do not have yet a feature for that so the UI stays simple and consistent.
-            $normalizedStatus = $record->status === 'late' ? 'present' : $record->status;
+            // For absent records, use session started_at date; for others, use checked_in_at
+            $recordDate = $checkedInAt 
+                ? $record->checked_in_at->toIso8601String()
+                : ($record->session && $record->session->started_at 
+                    ? $record->session->started_at->toIso8601String() 
+                    : null);
             
             return [
                 'id' => $record->id,
-                'status' => $normalizedStatus,
+                'status' => $record->status, // Keep original status: 'present', 'late', or 'absent'
                 'checked_in_at' => $checkedInAt,
+                'date' => $recordDate, // Use this for date display (handles absent records)
                 'student' => $record->student ? [
                     'id' => $record->student->id,
                     'student_id' => $record->student->student_id,
@@ -127,6 +138,7 @@ class ReportsController extends Controller
                 'session' => $record->session ? [
                     'id' => $record->session->id,
                     'teacher_class_id' => $record->session->teacher_class_id,
+                    'started_at' => $record->session->started_at ? $record->session->started_at->toIso8601String() : null,
                     'teacherClass' => $record->session->teacherClass ? [
                         'id' => $record->session->teacherClass->id,
                         'class_name' => $record->session->teacherClass->class_name,
@@ -163,7 +175,14 @@ class ReportsController extends Controller
         }
         
         if ($date) {
-            $query->whereDate('checked_in_at', $date);
+            // For absent records, checked_in_at is null, so filter by session started_at
+            // For present/late records, filter by checked_in_at
+            $query->where(function($q) use ($date) {
+                $q->whereDate('checked_in_at', $date)
+                  ->orWhereHas('session', function($sessionQuery) use ($date) {
+                      $sessionQuery->whereDate('started_at', $date);
+                  });
+            });
         }
         
         return $query->orderBy('checked_in_at')->get();

@@ -22,11 +22,15 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    // Student login (guest only)
+    // Unified login (guest only) - handles both teacher and student
+    Route::post('login', [\App\Http\Controllers\Auth\UnifiedAuthController::class, 'login'])
+        ->name('unified.login');
+
+    // Student login (guest only) - kept for backward compatibility
     Route::post('student/login', [StudentAuthController::class, 'login'])
         ->name('student.login');
 
-    // Teacher login (guest only)
+    // Teacher login (guest only) - kept for backward compatibility
     Route::post('teacher/login', [TeacherAuthController::class, 'login'])
         ->name('teacher.login');
 

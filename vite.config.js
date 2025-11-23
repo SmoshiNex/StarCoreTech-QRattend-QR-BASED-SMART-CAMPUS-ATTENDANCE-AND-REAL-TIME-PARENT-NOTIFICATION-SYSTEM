@@ -8,6 +8,7 @@ export default defineConfig({
         laravel({
             input: 'resources/js/app.jsx',
             refresh: true,
+            valetTls: false,
         }),
         react(),
     ],
@@ -17,12 +18,14 @@ export default defineConfig({
         },
     },
     server: {
-        host: true,
+        host: '0.0.0.0', // Allows access from network (for mobile testing)
         port: 5173,
         strictPort: true,
         hmr: {
-            host: '192.168.43.35', // my PC IP inside hotspot to connect on mobile phone
             protocol: 'ws',
+            // Use environment variable or detect automatically
+            // For production builds, this is not used (assets are static)
+            host: process.env.VITE_HMR_HOST || 'localhost',
             port: 5173,
         },
     },

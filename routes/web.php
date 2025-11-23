@@ -63,12 +63,23 @@ Route::middleware('auth:teacher')->group(function () {
     // Reports routes
     Route::get('/teacher/reports', [ReportsController::class, 'index'])->name('teacher.reports');
     Route::get('/teacher/reports/export', [ReportsController::class, 'export'])->name('teacher.reports.export');
+    
+    // Notifications
+    Route::get('/teacher/notifications', [\App\Http\Controllers\NotificationController::class, 'teacherNotifications'])->name('teacher.notifications');
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 });
 
 // Student Routes Group
 Route::middleware('auth:student')->group(function () {
     // My Classes
     Route::get('/student/my-classes', [StudentClassController::class, 'myClasses'])->name('student.classes');
+    // Attendance History
+    Route::get('/student/attendance-history', [StudentClassController::class, 'attendanceHistory'])->name('student.attendance.history');
+    // Notifications
+    Route::get('/student/notifications', [StudentClassController::class, 'notifications'])->name('student.notifications');
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 });
 
 // Public routes for QR code scanning and class registration (can be accessed before login)

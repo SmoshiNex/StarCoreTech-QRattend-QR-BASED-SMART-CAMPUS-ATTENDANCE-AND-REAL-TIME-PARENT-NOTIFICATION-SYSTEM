@@ -55,30 +55,44 @@ class TeacherAuthController extends Controller
             return $class->attendanceSessions->count() > 0;
         })->count();
         
-        // Calculate present and absent counts
-        // NOTE: Only count absent students after a session has ENDED.
-        // Students who checked in should NEVER be counted as absent
+        // Calculate present and absent counts for today
+        // Count records from today's sessions
         $presentToday = AttendanceRecord::query()
-            ->whereDate('checked_in_at', now()->toDateString())
-            ->whereHas('session.teacherClass', function ($query) use ($teacher) {
-                $query->where('teacher_id', $teacher->id);
+            ->whereIn('status', ['present', 'late'])
+            ->whereHas('session', function ($query) use ($teacher) {
+                $query->whereDate('started_at', today())
+                      ->whereHas('teacherClass', function ($q) use ($teacher) {
+                          $q->where('teacher_id', $teacher->id);
+                      });
             })
             ->count();
-        // Absent tracking will be added when late/absent flows are finalized.
-        $absentToday = 0;
+        
+        // Count absent records from today's ended sessions
+        $absentToday = AttendanceRecord::query()
+            ->where('status', 'absent')
+            ->whereHas('session', function ($query) use ($teacher) {
+                $query->whereDate('started_at', today())
+                      ->where('status', 'ended')
+                      ->whereHas('teacherClass', function ($q) use ($teacher) {
+                          $q->where('teacher_id', $teacher->id);
+                      });
+            })
+            ->count();
 
         // Format classes for display
         $formattedClasses = $classes->map(function($class) {
             $todaySession = $class->attendanceSessions->first();
             $totalStudents = $class->students->count();
-            $present = $todaySession ? $todaySession->records->count() : 0;
+            
+            // Count present/late records
+            $present = $todaySession 
+                ? $todaySession->records()->whereIn('status', ['present', 'late'])->count() 
+                : 0;
 
-            // Only show absences once the session has ended
-            // AND only count students who did NOT check in
+            // Count absent records for ended sessions
+            // This uses the actual absent records created when session ends
             if ($todaySession && $todaySession->status === 'ended') {
-                $checkedInStudentIds = $todaySession->records->pluck('student_id')->toArray();
-                // Count only enrolled students who did NOT check in
-                $absent = $class->students->whereNotIn('id', $checkedInStudentIds)->count();
+                $absent = $todaySession->records()->where('status', 'absent')->count();
             } else {
                 $absent = 0;
             }
@@ -101,6 +115,7 @@ class TeacherAuthController extends Controller
                 'total' => $totalStudents,
                 'present' => $present,
                 'absent' => $absent,
+                'active_session_id' => $todaySession && $todaySession->status === 'active' ? $todaySession->id : null,
             ];
         });
 

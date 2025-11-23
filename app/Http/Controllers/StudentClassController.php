@@ -46,7 +46,8 @@ class StudentClassController extends Controller
                 'student_id' => $validated['student_id'],
                 'first_name' => $firstName,
                 'last_name' => $lastName,
-                'email' => $validated['parent_email'], // Store parent email
+                'email' => $validated['student_id'] . '@student.local', // Use student_id as email placeholder
+                'parent_email' => $validated['parent_email'], // Store parent email separately
                 'course' => 'N/A', // Default value
                 'year_level' => 1, // Default value
                 'section' => 'N/A', // Default value
@@ -89,7 +90,53 @@ class StudentClassController extends Controller
         $classes = $student->classes()->with('teacher')->get();
 
         return Inertia::render('Student/MyClasses', [
-            'classes' => $classes
+            'classes' => $classes,
+            'student' => $student,
+        ]);
+    }
+
+    public function attendanceHistory()
+    {
+        $student = Auth::guard('student')->user();
+        
+        $records = \App\Models\AttendanceRecord::where('student_id', $student->id)
+            ->with(['session.teacherClass.teacher'])
+            ->orderBy('checked_in_at', 'desc')
+            ->paginate(20)
+            ->through(function ($record) {
+                return [
+                    'id' => $record->id,
+                    'class_name' => $record->session->teacherClass->class_name 
+                        ?? ($record->session->teacherClass->class_code && $record->session->teacherClass->subject_name 
+                            ? $record->session->teacherClass->class_code . ' - ' . $record->session->teacherClass->subject_name
+                            : ($record->session->teacherClass->subject_name ?? $record->session->teacherClass->class_code ?? 'Unknown Class')),
+                    'subject_name' => $record->session->teacherClass->subject_name ?? '',
+                    'teacher_name' => $record->session->teacherClass->teacher 
+                        ? $record->session->teacherClass->teacher->first_name . ' ' . $record->session->teacherClass->teacher->last_name
+                        : 'Unknown Teacher',
+                    'checked_in_at' => $record->checked_in_at ? $record->checked_in_at->format('Y-m-d H:i:s') : null,
+                    'checked_in_at_formatted' => $record->checked_in_at ? $record->checked_in_at->format('M d, Y g:i A') : 'N/A',
+                    'status' => $record->status,
+                ];
+            });
+
+        return Inertia::render('Student/AttendanceHistory', [
+            'records' => $records,
+            'student' => $student,
+        ]);
+    }
+
+    public function notifications()
+    {
+        $student = Auth::guard('student')->user();
+        
+        $notifications = \App\Models\NotificationLog::forStudent($student->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return Inertia::render('Student/Notifications', [
+            'notifications' => $notifications,
+            'student' => $student,
         ]);
     }
 }

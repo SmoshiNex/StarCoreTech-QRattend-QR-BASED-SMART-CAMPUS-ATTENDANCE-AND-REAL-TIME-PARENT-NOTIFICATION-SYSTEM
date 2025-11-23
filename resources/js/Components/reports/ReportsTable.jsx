@@ -55,10 +55,9 @@ export default function ReportsTable({ records = [], isLoading = false }) {
                                         className = "Unknown Class";
                                     }
                                     
-                                    // Format date - support both static date string and database date
+                                    // Format date - use date field (which handles absent records) or fallback to checked_in_at
                                     let formattedDate = "-";
                                     if (record.date) {
-                                        // If it's already a formatted date string (YYYY-MM-DD), format it nicely
                                         const dateObj = new Date(record.date);
                                         if (!isNaN(dateObj.getTime())) {
                                             formattedDate = dateObj.toLocaleDateString("en-US", {
@@ -69,6 +68,13 @@ export default function ReportsTable({ records = [], isLoading = false }) {
                                         }
                                     } else if (record.checked_in_at) {
                                         formattedDate = new Date(record.checked_in_at).toLocaleDateString("en-US", {
+                                            year: "numeric",
+                                            month: "short",
+                                            day: "numeric",
+                                        });
+                                    } else if (record.session?.started_at) {
+                                        // Fallback to session date for absent records
+                                        formattedDate = new Date(record.session.started_at).toLocaleDateString("en-US", {
                                             year: "numeric",
                                             month: "short",
                                             day: "numeric",

@@ -18,15 +18,31 @@ export function useQrScanner(open, onDetected) {
     }, []);
 
     const requestCameraStream = async () => {
-        const constraints = {
-            video: { facingMode: { ideal: "environment" } },
-            audio: false,
-        };
+        // Try multiple constraint configurations for better browser compatibility
+        const constraints = [
+            { video: { facingMode: { ideal: "environment" } }, audio: false },
+            { video: { facingMode: "environment" }, audio: false },
+            { video: { facingMode: { exact: "environment" } }, audio: false },
+            { video: true, audio: false }, // Fallback to any camera
+        ];
 
+        // Modern API (Chrome, Firefox, Edge, Safari 11+)
         if (navigator.mediaDevices?.getUserMedia) {
-            return navigator.mediaDevices.getUserMedia(constraints);
+            for (const constraint of constraints) {
+                try {
+                    return await navigator.mediaDevices.getUserMedia(constraint);
+                } catch (err) {
+                    // If it's not a constraint error, throw it
+                    if (err.name !== 'OverconstrainedError' && err.name !== 'ConstraintNotSatisfiedError') {
+                        throw err;
+                    }
+                    // Otherwise, try next constraint
+                    continue;
+                }
+            }
         }
 
+        // Legacy API (older browsers)
         const legacyGetUserMedia =
             navigator.getUserMedia ||
             navigator.webkitGetUserMedia ||
@@ -34,52 +50,110 @@ export function useQrScanner(open, onDetected) {
             navigator.msGetUserMedia;
 
         if (legacyGetUserMedia) {
-            return new Promise((resolve, reject) =>
-                legacyGetUserMedia.call(navigator, constraints, resolve, reject)
-            );
+            return new Promise((resolve, reject) => {
+                // Try with ideal constraint first
+                legacyGetUserMedia.call(navigator, constraints[0], resolve, (err) => {
+                    // If that fails, try with simple video: true
+                    legacyGetUserMedia.call(navigator, constraints[3], resolve, reject);
+                });
+            });
         }
 
         throw new Error("UNSUPPORTED_BROWSER");
     };
 
     const startCamera = async () => {
-        if (
-            typeof navigator === "undefined" ||
-            !navigator.mediaDevices ||
-            typeof navigator.mediaDevices.getUserMedia !== "function"
-        ) {
-            setError(
-                "Camera access is not available in this browser. Try using Chrome or Safari on your phone."
-            );
-            setIsScanning(false);
-            return;
+        // Check for secure context (required for camera access)
+        // Note: localhost and 127.0.0.1 are considered secure contexts
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname === '[::1]';
+        
+        // Warn about insecure context but still try to access camera
+        // Some browsers may allow camera access on local IPs
+        if (typeof window !== "undefined" && !window.isSecureContext && !isLocalhost) {
+            // Show warning but continue - some browsers allow it
+            console.warn('Accessing camera on non-secure context. This may not work in all browsers.');
         }
 
+        // Try to get camera access with better browser compatibility
         try {
             const stream = await requestCameraStream();
 
             if (!videoRef.current) {
                 return;
             }
+            
+            // Handle different browser implementations
+            if (videoRef.current.srcObject !== undefined) {
+                videoRef.current.srcObject = stream;
+            } else if (videoRef.current.mozSrcObject !== undefined) {
+                videoRef.current.mozSrcObject = stream;
+            } else if (window.URL && window.URL.createObjectURL) {
+                videoRef.current.src = window.URL.createObjectURL(stream);
+            } else if (window.webkitURL && window.webkitURL.createObjectURL) {
+                videoRef.current.src = window.webkitURL.createObjectURL(stream);
+            } else {
+                setError("Your browser does not support camera access.");
+                setIsScanning(false);
+                return;
+            }
+
             streamRef.current = stream;
-            videoRef.current.srcObject = stream;
-            await videoRef.current.play();
+            
+            // Play video with error handling
+            try {
+                await videoRef.current.play();
+            } catch (playError) {
+                console.error("Error playing video:", playError);
+                setError("Unable to start camera. Please check permissions.");
+                setIsScanning(false);
+                return;
+            }
+            
             setError("");
             setIsScanning(true);
             startScanning();
         } catch (err) {
             console.error("Error accessing camera:", err);
 
-            if (err.message === "UNSUPPORTED_BROWSER") {
-                setError("Camera scanning is not supported on this browser.");
-            } else if (err.name === "NotAllowedError") {
-                setError("Camera permission was denied. Please allow camera access and retry.");
-            } else if (!window.isSecureContext) {
+            // Check if error is due to insecure context
+            if (!window.isSecureContext && !isLocalhost) {
                 setError(
-                    "Camera access requires a secure connection. Use https:// for your LAN IP or mark it as a secure origin in Chrome."
+                    "Camera requires HTTPS. Solutions:\n\n" +
+                    "1. Use https://localhost:8000\n" +
+                    "2. Enable insecure origins in Chrome:\n" +
+                    "   chrome://flags/#unsafely-treat-insecure-origin-as-secure\n" +
+                    "   Add: http://your.ip.of.the.phone\n\n" +
+                    "3. Access via localhost instead of IP"
                 );
+            } else if (err.message === "UNSUPPORTED_BROWSER") {
+                setError("Camera scanning is not supported on this browser. Please use a modern browser like Chrome, Firefox, Safari, or Edge.");
+            } else if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                setError("Camera permission was denied. Please allow camera access in your browser settings and try again.");
+            } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+                setError("No camera found. Please ensure a camera is connected and try again.");
+            } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+                setError("Camera is already in use by another application. Please close other apps using the camera.");
+            } else if (err.name === "OverconstrainedError" || err.name === "ConstraintNotSatisfiedError") {
+                setError("Camera constraints could not be satisfied. Trying with different settings...");
+                // Retry with less specific constraints
+                try {
+                    const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = fallbackStream;
+                        streamRef.current = fallbackStream;
+                        await videoRef.current.play();
+                        setError("");
+                        setIsScanning(true);
+                        startScanning();
+                        return;
+                    }
+                } catch (fallbackErr) {
+                    setError("Unable to access the camera. Please check your browser settings.");
+                }
             } else {
-                setError("Unable to access the camera. Please check permissions in your browser settings.");
+                setError("Unable to access the camera. Please check permissions in your browser settings and ensure you're using HTTPS.");
             }
             setIsScanning(false);
         }

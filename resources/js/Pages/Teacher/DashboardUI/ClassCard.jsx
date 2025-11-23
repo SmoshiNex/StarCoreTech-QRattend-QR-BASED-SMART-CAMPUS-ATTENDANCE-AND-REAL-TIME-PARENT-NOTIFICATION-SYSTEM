@@ -31,7 +31,7 @@ export default function ClassCard({ classItem, onStartAttendance }) {
                     className="hover:bg-black hover:text-white w-full md:w-auto"
                     onClick={() => onStartAttendance(classItem)}
                 >
-                    Start Attendance
+                    {classItem.status === 'active' ? 'View Session' : 'Start Attendance'}
                 </Button>
             </div>
             <div className="flex flex-wrap gap-6">

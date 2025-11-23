@@ -1,86 +1,56 @@
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useForm } from "@inertiajs/react";
 
 export default function LoginModal() {
-  const [activeTab, setActiveTab] = useState("teacher");
-  const [teacherEmailError, setTeacherEmailError] = useState("");
-  const [studentIdError, setStudentIdError] = useState("");
+  const [identifierError, setIdentifierError] = useState("");
 
-  const validateStudentId = (studentId) => {
-    const value = (studentId || "").trim();
+  const validateIdentifier = (identifier) => {
+    const value = (identifier || "").trim();
     if (!value) {
-      setStudentIdError("Student ID is required.");
-      return false
-    }
-
-    const idPattern = /^\d{4}-\d{5}$/;
-    if (!idPattern.test(value)) {
-      setStudentIdError("Invalid Student ID format. Please use the format YYYY-NNNNN.");
+      setIdentifierError("Email or Student ID is required.");
       return false;
     }
 
-    setStudentIdError("");
-    return true;
-  }
-
-  
-  const validateTeacherEmail = (email) => {
-    const value = (email || "").trim();
-    if (!value) {
-      setTeacherEmailError("Email is required.");
-      return false;
+    // Check if it's an email
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    
+    if (isEmail) {
+      // Validate WMSU email for teachers
+      const isWmsu = /@wmsu\.edu\.ph$/i.test(value);
+      if (!isWmsu) {
+        setIdentifierError("Please use your WMSU email address.");
+        return false;
+      }
+    } else {
+      // Validate student ID format (optional - can be flexible)
+      // Allow any format, backend will handle validation
     }
-    const isWmsu = !/@wmsu\.edu\.ph$/i.test(value);
 
-    if (isWmsu) {
-      setTeacherEmailError("Please use your WMSU email address.");
-      return false;
-    }
-    setTeacherEmailError("");
+    setIdentifierError("");
     return true;
   };
 
-  
   const {
-    data: studentData,
-    setData: setStudentData,
-    post: studentPost,
-    processing: studentProcessing,
-    errors: studentErrors,
+    data: loginData,
+    setData: setLoginData,
+    post: loginPost,
+    processing: loginProcessing,
+    errors: loginErrors,
   } = useForm({
-    student_id: "",
-    password:"",
-  });
-
-  const {
-    data: teacherData,
-    setData: setTeacherData,
-    post: teacherPost,
-    processing: teacherProcessing,
-    errors: teacherErrors,
-  } = useForm({
-    email: "",
+    identifier: "",
     password: "",
   });
 
-  const handleStudentSubmit = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validateStudentId(studentData.student_id)) return;
-    studentPost(route("student.login"), {
-      preserveScroll: true,
-    });
-  };
-
-  const handleTeacherSubmit = (e) => {
-    e.preventDefault();
-    if (!validateTeacherEmail(teacherData.email)) return;
-    teacherPost(route("teacher.login"), {
+    if (!validateIdentifier(loginData.identifier)) return;
+    
+    loginPost(route("unified.login"), {
       preserveScroll: true,
       onError: () => {
-        // keep validation errors visible
+        // Keep validation errors visible
       },
     });
   };
@@ -98,110 +68,62 @@ export default function LoginModal() {
             className="mx-auto w-16 h-16 rounded-full"
           />
           <h1 className="text-2xl font-bold">Smart Campus Attendance QRattend</h1>
+          <p className="text-sm text-gray-600">Login with your email or student ID</p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full mb-6 p-1">
-            <TabsTrigger 
-              value="teacher" 
-              className="text-base uppercase font-bold"
-            >
-              Teacher
-            </TabsTrigger>
-            <TabsTrigger 
-              value="student" 
-              className="text-base uppercase font-bold"
-            >
-              Student
-            </TabsTrigger>
-          </TabsList>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Input
+              type="text"
+              placeholder="Email (teacher) or Student ID"
+              value={loginData.identifier}
+              onChange={(e) => {
+                const v = e.target.value;
+                setLoginData("identifier", v);
+                validateIdentifier(v);
+              }}
+              className="border rounded-lg p-3"
+              required
+            />
+            {(identifierError || loginErrors.identifier) && (
+              <p className="text-sm text-red-600 mt-1">
+                {identifierError || loginErrors.identifier}
+              </p>
+            )}
+          </div>
 
-          <TabsContent value="teacher">
-            <form onSubmit={handleTeacherSubmit} className="space-y-4">
+          <div>
+            <Input
+              type="password"
+              placeholder="Password"
+              value={loginData.password}
+              onChange={e => setLoginData("password", e.target.value)}
+              className="border rounded-lg p-3"
+              required
+            />
+            {loginErrors.password && (
+              <p className="text-sm text-red-600 mt-1">{loginErrors.password}</p>
+            )}
+          </div>
 
-              <Input
-                type="email"
-                placeholder="example@wmsu.edu.ph"
-                value={teacherData.email}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setTeacherData("email", v);
-                  validateTeacherEmail(v);
-                }}
-                className="border rounded-lg p-3"
-                required
-              />
-              {(teacherEmailError || teacherErrors.email) && (
-                <p className="text-sm text-red-600">
-                  {teacherEmailError || teacherErrors.email}
-                </p>
-              )}
-              <Input
-                type="password"
-                placeholder="password"
-                value={teacherData.password}
-                onChange={e => setTeacherData("password", e.target.value)}
-                className="border rounded-lg p-3"
-                required
-              />
-              <div className="text-right">
-                <a href={route('teacher.password.reset')} className="text-sm text-gray-600 hover:text-gray-900">
-                  Forgot password?
-                </a>
-              </div>
-              {teacherErrors.password && (
-                <p className="text-sm text-red-600">{teacherErrors.password}</p>
-              )}
-              <Button 
-                type="submit" 
-                className="w-full bg-black text-white rounded-lg p-3 uppercase disabled:opacity-70"
-                disabled={teacherProcessing}
-              >
-                {teacherProcessing ? "logging in..." : "Login"}
-              </Button>
-            </form>
-          </TabsContent>
+          <div className="text-right">
+            <a href={route('teacher.password.reset')} className="text-sm text-gray-600 hover:text-gray-900">
+              Forgot password?
+            </a>
+          </div>
 
-          <TabsContent value="student">
-            <form onSubmit={handleStudentSubmit} className="space-y-4">
-              <Input
-                type="text"
-                placeholder="Enter your student ID"
-                value={studentData.student_id}
-                onChange={e => {
-                  const v = e.target.value;
-                  setStudentData("student_id", v);
-                  validateStudentId(v);
-                }}
-                className="border rounded-lg p-3"
-                required
-              />
-              {(studentIdError || studentErrors.student_id) && (
-                <p className="text-sm text-red-600">
-                  {studentIdError || studentErrors.student_id}
-                </p>
-              )}
-              <Input
-                type="password"
-                placeholder="password"
-                value={studentData.password}
-                onChange={e => setStudentData("password", e.target.value)}
-                className="border rounded-lg p-3"
-                required
-              />
-              {studentErrors.password && (
-                <p className="text-sm text-red-600">{studentErrors.password}</p>
-              )}
-              <Button 
-                type="submit" 
-                className="w-full bg-black text-white rounded-lg p-3 uppercase disabled:opacity-70"
-                disabled={studentProcessing}
-              >
-                {studentProcessing ? "logging in..." : "Login"}
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
+          {loginErrors.message && (
+            <p className="text-sm text-red-600 text-center">{loginErrors.message}</p>
+          )}
+
+          <Button 
+            type="submit" 
+            className="w-full bg-black text-white rounded-lg p-3 uppercase disabled:opacity-70"
+            disabled={loginProcessing}
+          >
+            {loginProcessing ? "Logging in..." : "Login"}
+          </Button>
+        </form>
       </div>
     </div>
   );

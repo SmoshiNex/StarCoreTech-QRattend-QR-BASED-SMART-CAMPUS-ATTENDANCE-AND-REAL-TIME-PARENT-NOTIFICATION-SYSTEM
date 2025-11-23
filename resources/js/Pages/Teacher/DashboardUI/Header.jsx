@@ -40,12 +40,12 @@ export default function Header({ active = 'dashboard' }) {
                     >
                         Reports
                     </Link>
-                    <a
-                        href="#"
+                    <Link
+                        href="/teacher/notifications"
                         className={navItemClass(active === 'notifications')}
                     >
                         Notifications
-                    </a>
+                    </Link>
                     <Button variant="destructive" size="sm" onClick={handleLogout}>
                         Logout
                     </Button>
