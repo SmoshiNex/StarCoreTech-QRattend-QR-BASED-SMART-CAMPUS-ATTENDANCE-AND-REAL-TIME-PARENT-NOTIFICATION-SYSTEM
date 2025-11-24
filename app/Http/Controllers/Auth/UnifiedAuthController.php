@@ -20,7 +20,8 @@ class UnifiedAuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $identifier = $request->identifier;
+        // Trim whitespace which is common on mobile phones
+        $identifier = trim($request->identifier);
         $password = $request->password;
 
         // Determine if identifier is an email (teacher) or student_id (student)
@@ -39,7 +40,7 @@ class UnifiedAuthController extends Controller
                 return $result;
             }
             
-            // If student login fails, try teacher login (in case it's an email without @)
+            // If student login fails, try teacher login (fallback)
             $result = $this->attemptTeacherLogin($identifier, $password, $request);
             if ($result) {
                 return $result;
@@ -49,7 +50,6 @@ class UnifiedAuthController extends Controller
         // If all attempts fail, return error
         return back()->withErrors([
             'identifier' => 'The provided credentials do not match our records.',
-            'message' => 'Invalid email/student ID or password.',
         ]);
     }
 
@@ -62,7 +62,11 @@ class UnifiedAuthController extends Controller
         $teacher = Teacher::where('email', $identifier)->first();
 
         if ($teacher && password_verify($password, $teacher->password)) {
-            Auth::guard('teacher')->login($teacher);
+            // FIX: Ensure any other sessions are cleared before logging in
+            Auth::guard('student')->logout(); 
+            Auth::guard('web')->logout();
+
+            Auth::guard('teacher')->login($teacher); // Standard session login
             $request->session()->regenerate();
             
             return redirect()->intended('/teacher/dashboard')
@@ -81,7 +85,11 @@ class UnifiedAuthController extends Controller
         $student = Student::where('student_id', $identifier)->first();
 
         if ($student && password_verify($password, $student->password)) {
-            Auth::guard('student')->login($student);
+            // FIX: Ensure any other sessions are cleared before logging in
+            Auth::guard('teacher')->logout();
+            Auth::guard('web')->logout();
+
+            Auth::guard('student')->login($student); // Standard session login
             $request->session()->regenerate();
             
             return redirect()->intended('/student/dashboard')
@@ -91,4 +99,3 @@ class UnifiedAuthController extends Controller
         return null;
     }
 }
-

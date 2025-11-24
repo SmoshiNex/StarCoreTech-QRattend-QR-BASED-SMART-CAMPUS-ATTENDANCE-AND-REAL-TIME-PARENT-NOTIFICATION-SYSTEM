@@ -65,7 +65,7 @@ export default function TeacherNotifications({ notifications, teacher }) {
         }
     };
 
-    const unreadCount = notifications.data?.filter(n => !n.read_at)?.length || 0;
+    
 
     return (
         <>
@@ -78,20 +78,8 @@ export default function TeacherNotifications({ notifications, teacher }) {
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up!'}
-                                </p>
+                                
                             </div>
-                            {unreadCount > 0 && (
-                                <button
-                                    onClick={handleMarkAllAsRead}
-                                    disabled={markingAsRead}
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-                                >
-                                    <CheckCheck className="w-4 h-4" />
-                                    <span>Mark all as read</span>
-                                </button>
-                            )}
                         </div>
 
                         {notifications.data && notifications.data.length > 0 ? (
@@ -133,15 +121,7 @@ export default function TeacherNotifications({ notifications, teacher }) {
                                                         <span className={getStatusBadge(notification.status)}>
                                                             {notification.status}
                                                         </span>
-                                                        {!notification.read_at && (
-                                                            <button
-                                                                onClick={() => handleMarkAsRead(notification.id)}
-                                                                className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                                                title="Mark as read"
-                                                            >
-                                                                <CheckCircle className="w-4 h-4 text-gray-400" />
-                                                            </button>
-                                                        )}
+                                                    
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">

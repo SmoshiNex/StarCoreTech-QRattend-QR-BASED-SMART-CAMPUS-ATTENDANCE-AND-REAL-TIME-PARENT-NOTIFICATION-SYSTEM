@@ -4,6 +4,7 @@ import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { Link } from '@inertiajs/react';
+import { ArrowLeft } from 'lucide-react';
 
 export default function TeacherPasswordReset() {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -23,11 +24,20 @@ export default function TeacherPasswordReset() {
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-md relative">
                 <div className="bg-white p-8 rounded-lg shadow-md">
+                    <div className="absolute top-0 right-0 z-10 mt-5">
+                        <Link
+                            href={route('student.password.reset')}
+                            className="text-xs text-gray-500 hover:text-gray-700 transition-colors duration-200 flex items-center gap-1"
+                        >
+                            Student?
+                            <ArrowLeft className="h-3 w-3" />
+                        </Link>
+                    </div>
                     <div className="flex justify-center mb-6">
                         <Link href="/">
-                            <img src="/logo.png" alt="Logo" className="w-16 h-16" />
+                            <img src="/images/logo.jpg" alt="Logo" className="w-16 h-16" />
                         </Link>
                     </div>
 

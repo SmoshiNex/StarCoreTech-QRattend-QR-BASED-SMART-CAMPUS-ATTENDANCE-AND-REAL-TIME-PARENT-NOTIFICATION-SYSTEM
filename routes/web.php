@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\TeacherPasswordResetController;
+use App\Http\Controllers\Auth\StudentPasswordResetController;
 use App\Http\Controllers\Auth\TeacherAuthController;
 use App\Http\Controllers\TeacherClassController;
 use App\Http\Controllers\StudentClassController;
@@ -41,6 +42,12 @@ Route::get('/teacher/reset-password', [TeacherPasswordResetController::class, 's
     ->name('teacher.password.reset');
 Route::post('/teacher/reset-password', [TeacherPasswordResetController::class, 'reset'])
     ->name('teacher.password.update');
+
+// Student Password Reset Routes
+Route::get('/student/reset-password', [StudentPasswordResetController::class, 'showResetForm'])
+    ->name('student.password.reset');
+Route::post('/student/reset-password', [StudentPasswordResetController::class, 'reset'])
+    ->name('student.password.update');
 
 // Teacher Routes Group
 Route::middleware('auth:teacher')->group(function () {

@@ -186,7 +186,8 @@ class AttendanceController extends Controller
      */
     public function getLiveAttendance(AttendanceSession $session)
     {
-        $timezone = config('app.timezone', 'UTC');
+        // Use the timezone from config (now Asia/Manila)
+        $timezone = config('app.timezone', 'Asia/Manila');
         
         // Get all enrolled students
         $enrolledStudents = $session->teacherClass->students()
@@ -204,7 +205,9 @@ class AttendanceController extends Controller
         $allStudents = $enrolledStudents->map(function ($student) use ($attendanceRecords, $timezone) {
             $record = $attendanceRecords->get($student->id);
             
-            if ($record) {
+            // FIX: Only try to parse the date if the record exists AND checked_in_at is not null
+            // This prevents "Absent" records (which have null checked_in_at) from showing current time
+            if ($record && $record->checked_in_at) {
                 $checkedInAt = Carbon::parse($record->checked_in_at)->setTimezone($timezone);
                 return [
                     'id' => $student->id,
@@ -220,7 +223,8 @@ class AttendanceController extends Controller
                     'student_id' => $student->student_id,
                     'student_name' => $student->first_name . ' ' . $student->last_name,
                     'checked_in_at' => null,
-                    'status' => 'absent',
+                    // If record exists (e.g., manually marked absent), use that status, otherwise default to 'absent'
+                    'status' => $record ? $record->status : 'absent',
                     'has_checked_in' => false,
                 ];
             }
@@ -308,7 +312,9 @@ class AttendanceController extends Controller
                         'class_code' => $session->teacherClass->class_code ?? '',
                     ],
                     'record' => [
-                        'checked_in_at' => $existingRecord->checked_in_at->format('g:i A'),
+                        'checked_in_at' => $existingRecord->checked_in_at 
+                            ? $existingRecord->checked_in_at->setTimezone(config('app.timezone'))->format('g:i A')
+                            : 'N/A',
                         'status' => $existingRecord->status,
                     ],
                 ], 400);
@@ -319,7 +325,9 @@ class AttendanceController extends Controller
                 'message' => 'You have already checked in for this session',
                 'class' => $session->teacherClass,
                 'record' => [
-                    'checked_in_at' => $existingRecord->checked_in_at->format('g:i A'),
+                    'checked_in_at' => $existingRecord->checked_in_at 
+                        ? $existingRecord->checked_in_at->setTimezone(config('app.timezone'))->format('g:i A')
+                        : 'N/A',
                     'status' => $existingRecord->status,
                 ],
             ]);
@@ -333,7 +341,7 @@ class AttendanceController extends Controller
             try {
                 // Parse the local time string from client (format: YYYY-MM-DDTHH:mm:ss)
                 // Treat it as being in the app's timezone so the displayed time matches the phone
-                $timezone = config('app.timezone', 'UTC');
+                $timezone = config('app.timezone', 'Asia/Manila');
                 $parsedClientTime = Carbon::parse($clientTime, $timezone);
 
                 // Basic sanity check – if the phone time is more than 1 hour in the future,
@@ -351,11 +359,7 @@ class AttendanceController extends Controller
         }
 
         // Determine if student is present or late.
-        //
-        // IMPORTANT:
-        // - We only use the server timestamps to decide PRESENT vs LATE.
-        // - This avoids any mismatch between the phone clock and the server clock.
-        // - The `duration_minutes` window is always based on when the teacher started the session.
+        // The `duration_minutes` window is always based on when the teacher started the session.
         $startedAt = Carbon::parse($session->started_at);
         $allowedTime = $startedAt->copy()->addMinutes($session->duration_minutes);
 
@@ -448,7 +452,7 @@ class AttendanceController extends Controller
                 ],
                 'record' => [
                     'checked_in_at' => $record->checked_in_at->format('H:i:s'),
-                    'checked_in_at_formatted' => $record->checked_in_at->setTimezone(config('app.timezone', 'UTC'))->format('g:i:s A'),
+                    'checked_in_at_formatted' => $record->checked_in_at->setTimezone(config('app.timezone', 'Asia/Manila'))->format('g:i:s A'),
                     'status' => $record->status,
                 ],
                 'student' => [
