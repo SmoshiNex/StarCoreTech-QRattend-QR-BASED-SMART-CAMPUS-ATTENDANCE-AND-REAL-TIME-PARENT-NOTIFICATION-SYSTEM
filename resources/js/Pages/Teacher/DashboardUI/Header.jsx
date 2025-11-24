@@ -1,7 +1,12 @@
 import { Link } from '@inertiajs/react';
 import { Button } from "@/Components/ui/button";
 
-export default function Header() {
+const navItemClass = (isActive) =>
+    `text-sm transition-colors ${
+        isActive ? 'text-gray-900 font-semibold' : 'text-gray-500 hover:text-gray-700'
+    }`;
+
+export default function Header({ active = 'dashboard' }) {
     const handleLogout = () => {
         window.location.href = '/';
     };
@@ -17,10 +22,30 @@ export default function Header() {
                     </div>
                 </div>
                 <nav className="flex items-center gap-6">
-                    <Link href={route('teacher.dashboard')} className="text-gray-900 hover:text-gray-700">Dashboard</Link>
-                    <Link href={route('teacher.classes')} className="text-gray-500 hover:text-gray-700">My Classes</Link>
-                    <a href="#" className="text-gray-500 hover:text-gray-700">Reports</a>
-                    <a href="#" className="text-gray-500 hover:text-gray-700">Notifications</a>
+                    <Link
+                        href={route('teacher.dashboard')}
+                        className={navItemClass(active === 'dashboard')}
+                    >
+                        Dashboard
+                    </Link>
+                    <Link
+                        href={route('teacher.classes')}
+                        className={navItemClass(active === 'classes')}
+                    >
+                        My Classes
+                    </Link>
+                    <Link
+                        href={route('teacher.reports')}
+                        className={navItemClass(active === 'reports')}
+                    >
+                        Reports
+                    </Link>
+                    <Link
+                        href="/teacher/notifications"
+                        className={navItemClass(active === 'notifications')}
+                    >
+                        Notifications
+                    </Link>
                     <Button variant="destructive" size="sm" onClick={handleLogout}>
                         Logout
                     </Button>

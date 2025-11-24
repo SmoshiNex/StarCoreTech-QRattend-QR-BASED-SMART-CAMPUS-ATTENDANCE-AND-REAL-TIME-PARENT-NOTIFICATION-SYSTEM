@@ -8,9 +8,11 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\TeacherRegisteredUserController; // IMPORT THIS
 use App\Http\Controllers\Auth\StudentAuthController;
 use App\Http\Controllers\Auth\TeacherAuthController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\UnifiedAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -19,14 +21,23 @@ Route::middleware('guest')->group(function () {
 
     Route::post('register', [RegisteredUserController::class, 'store']);
 
+    // NEW: Teacher Registration Routes
+    Route::get('teacher/register', [TeacherRegisteredUserController::class, 'create'])
+        ->name('teacher.register');
+
+    Route::post('teacher/register', [TeacherRegisteredUserController::class, 'store']);
+
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    // Student login (guest only)
+    // Unified login (guest only)
+    Route::post('login', [UnifiedAuthController::class, 'login'])
+        ->name('unified.login');
+
+    // Legacy routes kept for backward compatibility
     Route::post('student/login', [StudentAuthController::class, 'login'])
         ->name('student.login');
 
-    // Teacher login (guest only)
     Route::post('teacher/login', [TeacherAuthController::class, 'login'])
         ->name('teacher.login');
 

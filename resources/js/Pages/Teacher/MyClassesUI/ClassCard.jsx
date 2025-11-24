@@ -1,8 +1,26 @@
 import { Button } from "@/Components/ui/button";
 import { Card } from "@/Components/ui/card";
-import { Edit, Trash2, Eye } from 'lucide-react';
+import { Edit, Trash2, Eye, Radio } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 export default function ClassCard({ classItem, onEdit, onDelete, onShowQR, onViewStudents, onStartAttendance }) {
+    const [studentsCount, setStudentsCount] = useState(classItem.students_enrolled || 0);
+
+    useEffect(() => {
+        const fetchStudents = async () => {
+            try {
+                const studentsResponse = await axios.get(`/teacher/classes/${classItem.id}/students`);
+                setStudentsCount(studentsResponse.data.length);
+            } catch (error) {
+                setStudentsCount(classItem.students_enrolled || 0);
+            }
+        };
+
+        fetchStudents();
+        const interval = setInterval(fetchStudents, 3000);
+        return () => clearInterval(interval);
+    }, [classItem.id, classItem.students_enrolled]);
     return (
         <Card className="p-6 bg-white">
             <div className="flex justify-between items-start mb-4">
@@ -48,14 +66,18 @@ export default function ClassCard({ classItem, onEdit, onDelete, onShowQR, onVie
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
-                {classItem.students_enrolled} Students Enrolled
+                <span>{studentsCount} Students Enrolled</span>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <Button variant="outline" className="w-full" onClick={() => onShowQR(classItem)}>
                     Registration QR
                 </Button>
-                <Button className="w-full" onClick={() => onStartAttendance(classItem)}>
+                <Button 
+                    className="w-full bg-black hover:bg-gray-900 text-white" 
+                    onClick={() => onStartAttendance(classItem)}
+                >
+                    <Radio className="w-4 h-4 mr-2" />
                     Start Attendance
                 </Button>
             </div>

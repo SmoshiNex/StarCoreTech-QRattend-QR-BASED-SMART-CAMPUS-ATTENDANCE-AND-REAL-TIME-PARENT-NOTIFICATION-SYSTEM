@@ -8,10 +8,11 @@ import axios from 'axios';
 export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
     const [session, setSession] = useState(null);
     const [records, setRecords] = useState([]);
-    const [stats, setStats] = useState({ total: 0, present: 0, late: 0 });
+    const [stats, setStats] = useState({ total: 0, present: 0, late: 0, absent: 0 });
     const [timeRemaining, setTimeRemaining] = useState(0);
     const [loading, setLoading] = useState(false);
     const [showEndConfirm, setShowEndConfirm] = useState(false);
+    const [enrolledStudents, setEnrolledStudents] = useState([]);
     const isStarting = useRef(false);
 
     // Start attendance session
@@ -35,15 +36,37 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
         }
     };
 
+    // Fetch enrolled students for the class
+    const fetchEnrolledStudents = async () => {
+        if (!classData) return;
+        try {
+            const response = await axios.get(`/teacher/classes/${classData.id}/students`);
+            setEnrolledStudents(response.data);
+        } catch (error) {
+            console.error('Error fetching enrolled students:', error);
+        }
+    };
+
     // Fetch live attendance data
     const fetchLiveData = async (sessionId) => {
         try {
             const response = await axios.get(route('teacher.attendance.live', sessionId));
             setRecords(response.data.records);
             setStats(response.data.stats);
-            setSession(response.data.session);
+            const updatedSession = response.data.session;
+            setSession(updatedSession);
+            
+            // If session was ended, update time remaining to 0
+            if (updatedSession.status === 'ended') {
+                setTimeRemaining(0);
+            }
         } catch (error) {
             console.error('Error fetching attendance:', error);
+            // If session not found or ended, check if we should keep modal open
+            if (error.response?.status === 404) {
+                // Session might have been ended, but keep modal open if classData has active_session_id
+                // This prevents auto-closing
+            }
         }
     };
 
@@ -53,10 +76,11 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
             await axios.post(route('teacher.attendance.end', session.id));
             setSession(null);
             setRecords([]);
-            setStats({ total: 0, present: 0, late: 0 });
+            setStats({ total: 0, present: 0, late: 0, absent: 0 });
             setTimeRemaining(0);
             setShowEndConfirm(false);
-            onClose();
+            // Allow modal to close after ending session
+            onClose(true);
             // Reload page to refresh dashboard stats
             router.reload();
         } catch (error) {
@@ -76,31 +100,52 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
             const diff = Math.max(0, Math.floor((onTimeDeadline - now) / 1000));
             setTimeRemaining(diff);
 
-            // Refresh data every 5 seconds
-            if (Math.floor(diff) % 5 === 0) {
-                fetchLiveData(session.id);
+            // Refresh data every 5 seconds to get updated session status
+            if (Math.floor(diff) % 5 === 0 || diff === 0) {
+                fetchLiveData(session.id).then(() => {
+                    // Check if session was ended on server
+                    // The fetchLiveData will update session state
+                });
             }
         }, 1000);
 
         return () => clearInterval(interval);
     }, [session]);
 
-    // Reset state when modal closes
+    // Load enrolled students and existing active session when modal opens
     useEffect(() => {
-        if (!isOpen) {
+        if (isOpen && classData) {
+            // Always fetch enrolled students when modal opens
+            fetchEnrolledStudents();
+            
+            // Load existing active session if it exists
+            if (classData.active_session_id && !session) {
+                fetchLiveData(classData.active_session_id);
+            }
+        }
+    }, [isOpen, classData]);
+
+    // Reset state when modal closes (only if no active session)
+    useEffect(() => {
+        if (!isOpen && !classData?.active_session_id) {
             setSession(null);
             setRecords([]);
-            setStats({ total: 0, present: 0, late: 0 });
+            setStats({ total: 0, present: 0, late: 0, absent: 0 });
             setTimeRemaining(0);
             setShowEndConfirm(false);
             isStarting.current = false;
         }
-    }, [isOpen]);
+    }, [isOpen, classData]);
 
-    // Format time remaining
+    // Format time remaining - show hours if duration is long
     const formatTime = (seconds) => {
-        const mins = Math.floor(seconds / 60);
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
         const secs = seconds % 60;
+        
+        if (hours > 0) {
+            return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
@@ -112,16 +157,34 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
 
     return (
         <>
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog 
+            open={isOpen} 
+            onOpenChange={(open) => {
+                // Prevent closing if there's an active session
+                if (!open) {
+                    if (session && session.status === 'active') {
+                        // Don't close - keep modal open for active sessions
+                        return;
+                    }
+                    if (classData?.active_session_id && !session) {
+                        // Don't close if class has active session but we haven't loaded it yet
+                        return;
+                    }
+                }
+                onClose(open);
+            }}
+        >
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Live Attendance Session</DialogTitle>
-                    <p className="text-sm text-gray-500">{classData.class_code} - {classData.subject_name}</p>
-                    {session && (
-                        <p className="text-xs text-gray-400">
-                            {new Date(session.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                        </p>
-                    )}
+                        <div className="flex-1">
+                            <DialogTitle>Live Attendance Session</DialogTitle>
+                            <p className="text-sm text-gray-500">{classData?.class_code} - {classData?.subject_name}</p>
+                            {session && (
+                                <p className="text-xs text-gray-400">
+                                    Started: {new Date(session.started_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                </p>
+                            )}
+                        </div>
                 </DialogHeader>
 
                 {!session ? (
@@ -129,6 +192,26 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
                     <div className="space-y-4 py-6">
                         <h3 className="text-lg font-semibold">Start Attendance Session</h3>
                         <p className="text-sm text-gray-600">Enter time allowed for students to check in as PRESENT:</p>
+                        
+                        {/* Show Enrolled Students Before Starting */}
+                        {enrolledStudents.length > 0 && (
+                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <p className="text-sm font-medium text-gray-700 mb-2">
+                                    Enrolled Students ({enrolledStudents.length})
+                                </p>
+                                <div className="max-h-32 overflow-y-auto">
+                                    <div className="space-y-1">
+                                        {enrolledStudents.map((student) => (
+                                            <div key={student.id} className="flex items-center gap-2 text-sm text-gray-600">
+                                                <UserX className="w-4 h-4 text-gray-400" />
+                                                <span>{student.first_name} {student.last_name}</span>
+                                                <span className="text-xs text-gray-400">({student.student_id})</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         
                         <div className="space-y-3">
                             <div>
@@ -139,19 +222,22 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
                                     type="number"
                                     id="duration"
                                     min="1"
-                                    max="60"
+                                    max="180"
                                     defaultValue={15}
                                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                                    placeholder="Enter minutes (1-60)"
+                                    placeholder="Enter minutes (1-180, up to 3 hours)"
                                 />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Maximum: 180 minutes (3 hours)
+                                </p>
                             </div>
                             
                             <button
                                 onClick={() => {
                                     const input = document.getElementById('duration');
                                     const duration = parseInt(input.value) || 15;
-                                    if (duration < 1 || duration > 60) {
-                                        alert('Please enter a duration between 1 and 60 minutes');
+                                    if (duration < 1 || duration > 180) {
+                                        alert('Please enter a duration between 1 and 180 minutes (3 hours)');
                                         return;
                                     }
                                     startSession(duration);
@@ -165,7 +251,7 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
                         
                         <div className="border-t pt-4">
                             <p className="text-xs text-gray-500 mb-2">Quick presets:</p>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-3 gap-2 mb-2">
                                 {[5, 10, 15].map((duration) => (
                                     <button
                                         key={duration}
@@ -178,76 +264,159 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
                                     </button>
                                 ))}
                             </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[30, 60, 120].map((duration) => (
+                                    <button
+                                        key={duration}
+                                        onClick={() => {
+                                            document.getElementById('duration').value = duration;
+                                        }}
+                                        className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
+                                    >
+                                        {duration === 60 ? '1 hour' : duration === 120 ? '2 hours' : `${duration} min`}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 ) : (
                     // Live Session View
                     <div className="space-y-6">
                         {/* Timer */}
-                        <div className="bg-black text-white rounded-lg p-6 text-center">
+                        <div className={`rounded-lg p-6 text-center ${
+                            session.status === 'ended' 
+                                ? 'bg-gray-600 text-white' 
+                                : timeRemaining === 0 
+                                ? 'bg-yellow-600 text-white' 
+                                : 'bg-black text-white'
+                        }`}>
                             <Clock className="w-8 h-8 mx-auto mb-2" />
-                            <div className="text-4xl font-bold">{formatTime(timeRemaining)}</div>
-                            <p className="text-sm text-gray-300 mt-1">Time Remaining</p>
+                            <div className="text-4xl font-bold">
+                                {session.status === 'ended' 
+                                    ? 'ENDED' 
+                                    : timeRemaining === 0 
+                                    ? '00:00' 
+                                    : formatTime(timeRemaining)}
+                            </div>
+                            <p className="text-sm text-gray-300 mt-1">
+                                {session.status === 'ended' 
+                                    ? 'Session Ended' 
+                                    : timeRemaining === 0 
+                                    ? 'Late Check-ins Only' 
+                                    : 'Time Remaining'}
+                            </p>
                         </div>
 
                         {/* Stats */}
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-4 gap-3">
                             <div className="bg-gray-100 rounded-lg p-4 text-center">
                                 <Users className="w-5 h-5 mx-auto mb-1 text-gray-600" />
                                 <div className="text-2xl font-bold">{stats.total}</div>
                                 <p className="text-xs text-gray-600">Total</p>
                             </div>
-                            <div className="bg-green-100 rounded-lg p-4 text-center">
-                                <UserCheck className="w-5 h-5 mx-auto mb-1 text-green-600" />
-                                <div className="text-2xl font-bold text-green-600">{stats.present}</div>
-                                <p className="text-xs text-gray-600">Present</p>
+                            <div
+                                className="rounded-lg p-4 text-center"
+                                style={{ backgroundColor: '#B9F8CF' }}
+                            >
+                                <UserCheck className="w-5 h-5 mx-auto mb-1 text-gray-800" />
+                                <div className="text-2xl font-bold text-gray-900">{stats.present}</div>
+                                <p className="text-xs text-gray-700">Present</p>
                             </div>
-                            <div className="bg-yellow-100 rounded-lg p-4 text-center">
-                                <UserX className="w-5 h-5 mx-auto mb-1 text-yellow-600" />
-                                <div className="text-2xl font-bold text-yellow-600">{stats.late}</div>
-                                <p className="text-xs text-gray-600">Late</p>
+                            <div
+                                className="rounded-lg p-4 text-center"
+                                style={{ backgroundColor: '#FFF085' }}
+                            >
+                                <UserX className="w-5 h-5 mx-auto mb-1 text-gray-800" />
+                                <div className="text-2xl font-bold text-gray-900">{stats.late}</div>
+                                <p className="text-xs text-gray-700">Late</p>
+                            </div>
+                            <div
+                                className="rounded-lg p-4 text-center"
+                                style={{ backgroundColor: '#FFC9C9' }}
+                            >
+                                <UserX className="w-5 h-5 mx-auto mb-1 text-gray-800" />
+                                <div className="text-2xl font-bold text-gray-900">
+                                    {stats.absent || 0}
+                                </div>
+                                <p className="text-xs text-gray-700">Absent</p>
                             </div>
                         </div>
 
                         {/* QR Code */}
-                        <div className="bg-gray-50 rounded-lg p-6 text-center">
-                            <p className="text-sm text-gray-600 mb-4">Students scan this QR code to check in</p>
-                            <div className="inline-block bg-white p-4 rounded-lg border-2 border-gray-200">
-                                <QRCodeSVG value={qrCodeUrl} size={200} level="H" />
+                        {session.status === 'ended' ? (
+                            <div className="bg-gray-100 rounded-lg p-6 text-center border-2 border-gray-300">
+                                <p className="text-sm text-gray-600 font-medium">Session has ended</p>
+                                <p className="text-xs text-gray-500 mt-2">Students can no longer check in</p>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="bg-gray-50 rounded-lg p-6 text-center">
+                                <p className="text-sm text-gray-600 mb-4">
+                                    {timeRemaining === 0 
+                                        ? 'Late check-ins allowed - Students scan this QR code' 
+                                        : 'Students scan this QR code to check in'}
+                                </p>
+                                <div className="inline-block bg-white p-4 rounded-lg border-2 border-gray-200">
+                                    <QRCodeSVG value={qrCodeUrl} size={200} level="H" />
+                                </div>
+                            </div>
+                        )}
 
-                        {/* Live Check-ins */}
+                        {/* All Students List */}
                         <div>
                             <h3 className="font-semibold mb-3 flex items-center gap-2">
                                 <Users className="w-4 h-4" />
-                                Live Check-ins ({records.length})
+                                Students ({stats.total})
                             </h3>
                             <div className="bg-white border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
                                 {records.length === 0 ? (
                                     <div className="p-8 text-center text-gray-500">
-                                        No check-ins yet
+                                        No students enrolled
                                     </div>
                                 ) : (
                                     <div className="divide-y">
                                         {records.map((record) => (
-                                            <div key={record.id} className="p-3 flex items-center justify-between hover:bg-gray-50">
+                                            <div key={record.id || record.student_id} className="p-3 flex items-center justify-between hover:bg-gray-50">
                                                 <div className="flex items-center gap-3">
-                                                    <UserCheck className={`w-5 h-5 ${record.status === 'present' ? 'text-green-500' : 'text-yellow-500'}`} />
+                                                    {record.has_checked_in ? (
+                                                        record.status === 'present' ? (
+                                                            <UserCheck className="w-5 h-5 text-green-500" />
+                                                        ) : (
+                                                            <UserX className="w-5 h-5 text-yellow-500" />
+                                                        )
+                                                    ) : (
+                                                        <UserX className="w-5 h-5 text-gray-300" />
+                                                    )}
                                                     <div>
                                                         <p className="font-medium text-sm">{record.student_name}</p>
                                                         <p className="text-xs text-gray-500">{record.student_id}</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-xs text-gray-600">{record.checked_in_at}</p>
-                                                    <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                                        record.status === 'present' 
-                                                            ? 'bg-green-100 text-green-700' 
-                                                            : 'bg-yellow-100 text-yellow-700'
-                                                    }`}>
-                                                        {record.status.toUpperCase()}
-                                                    </span>
+                                                    {record.has_checked_in ? (
+                                                        <>
+                                                            <p className="text-xs text-gray-600">{record.checked_in_at}</p>
+                                                            <span
+                                                                className="text-xs font-semibold px-2 py-1 rounded"
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        record.status === 'present'
+                                                                            ? '#B9F8CF'
+                                                                            : record.status === 'late'
+                                                                            ? '#FFF085'
+                                                                            : '#FFC9C9',
+                                                                    color: record.status === 'present' ? '#064e3b' : '#111827',
+                                                                }}
+                                                            >
+                                                                {record.status === 'present' ? 'PRESENT' : record.status === 'late' ? 'LATE' : 'ABSENT'}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span
+                                                            className="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600"
+                                                        >
+                                                            NOT CHECKED IN
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -257,12 +426,18 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
                         </div>
 
                         {/* End Session Button */}
-                        <button
-                            onClick={() => setShowEndConfirm(true)}
-                            className="w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                            End Session
-                        </button>
+                        {session.status === 'ended' ? (
+                            <div className="w-full py-3 bg-gray-400 text-white font-semibold rounded-lg text-center cursor-not-allowed">
+                                Session Ended
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setShowEndConfirm(true)}
+                                className="w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                                End Session
+                            </button>
+                        )}
                     </div>
                 )}
             </DialogContent>

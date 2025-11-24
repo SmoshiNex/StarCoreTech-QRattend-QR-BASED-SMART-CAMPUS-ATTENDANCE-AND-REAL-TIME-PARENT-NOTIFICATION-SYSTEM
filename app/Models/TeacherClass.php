@@ -14,6 +14,7 @@ class TeacherClass extends Model
     protected $fillable = [
         'teacher_id',
         'class_code',
+        'class_name',
         'subject_name',
         'schedule',
         'room'

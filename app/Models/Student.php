@@ -15,6 +15,7 @@ class Student extends Authenticatable
         'first_name',
         'last_name',
         'email',
+        'parent_email',
         'course',
         'year_level',
         'section',

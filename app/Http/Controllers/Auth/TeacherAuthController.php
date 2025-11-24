@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Teacher;
+use App\Models\AttendanceRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -54,24 +55,47 @@ class TeacherAuthController extends Controller
             return $class->attendanceSessions->count() > 0;
         })->count();
         
-        // Calculate present and absent counts
-        $presentToday = 0;
-        $absentToday = 0;
+        // Calculate present and absent counts for today
+        // Count records from today's sessions
+        $presentToday = AttendanceRecord::query()
+            ->whereIn('status', ['present', 'late'])
+            ->whereHas('session', function ($query) use ($teacher) {
+                $query->whereDate('started_at', today())
+                      ->whereHas('teacherClass', function ($q) use ($teacher) {
+                          $q->where('teacher_id', $teacher->id);
+                      });
+            })
+            ->count();
         
-        foreach ($classes as $class) {
-            $todaySessionForClass = $class->attendanceSessions->first();
-            if ($todaySessionForClass) {
-                $presentToday += $todaySessionForClass->records->count();
-                $absentToday += ($class->students->count() - $todaySessionForClass->records->count());
-            }
-        }
+        // Count absent records from today's ended sessions
+        $absentToday = AttendanceRecord::query()
+            ->where('status', 'absent')
+            ->whereHas('session', function ($query) use ($teacher) {
+                $query->whereDate('started_at', today())
+                      ->where('status', 'ended')
+                      ->whereHas('teacherClass', function ($q) use ($teacher) {
+                          $q->where('teacher_id', $teacher->id);
+                      });
+            })
+            ->count();
 
         // Format classes for display
         $formattedClasses = $classes->map(function($class) {
             $todaySession = $class->attendanceSessions->first();
             $totalStudents = $class->students->count();
-            $present = $todaySession ? $todaySession->records->count() : 0;
-            $absent = $totalStudents - $present;
+            
+            // Count present/late records
+            $present = $todaySession 
+                ? $todaySession->records()->whereIn('status', ['present', 'late'])->count() 
+                : 0;
+
+            // Count absent records for ended sessions
+            // This uses the actual absent records created when session ends
+            if ($todaySession && $todaySession->status === 'ended') {
+                $absent = $todaySession->records()->where('status', 'absent')->count();
+            } else {
+                $absent = 0;
+            }
             
             // Calculate the actual end time based on duration_minutes
             $timeDisplay = 'No session today';
@@ -91,6 +115,7 @@ class TeacherAuthController extends Controller
                 'total' => $totalStudents,
                 'present' => $present,
                 'absent' => $absent,
+                'active_session_id' => $todaySession && $todaySession->status === 'active' ? $todaySession->id : null,
             ];
         });
 
