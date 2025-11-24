@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/Components/ui/dialog";
 import { Button } from "@/Components/ui/button";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle } from "lucide-react"; 
 
 export default function CheckInSuccessModal({
     open,
@@ -11,7 +11,7 @@ export default function CheckInSuccessModal({
     const {
         className = "—",
         time = "—",
-        status = "PRESENT",
+        status = "PRESENT", // This will now receive 'LATE' correctly
         studentName = "",
         studentId = "",
     } = details;
@@ -23,7 +23,6 @@ export default function CheckInSuccessModal({
         onClose?.();
     };
 
-    // Format time display - show in 12-hour format (e.g., "2:30:45 PM")
     const displayTime = time && time !== "—" ? time : new Date().toLocaleTimeString('en-US', { 
         hour: '2-digit', 
         minute: '2-digit',
@@ -31,16 +30,35 @@ export default function CheckInSuccessModal({
         hour12: true 
     });
 
+    // Determine styling based on status
+    const isLate = status === 'LATE';
+    const statusColor = isLate ? "text-yellow-600" : "text-emerald-600";
+    const iconColor = isLate ? "text-yellow-500" : "text-emerald-500";
+    const badgeBg = isLate ? "#FFF085" : "#B9F8CF";
+    const badgeText = isLate ? "#854d0e" : "#064e3b";
+
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="w-[92vw] max-w-sm sm:max-w-md rounded-2xl p-0">
                 <DialogHeader className="space-y-4 px-5 pt-6 sm:px-6 text-center">
                     <div className="flex justify-center">
-                        <CheckCircle2 className="w-16 h-16 text-emerald-500" />
+                        {/* Dynamic Icon */}
+                        {isLate ? (
+                            <AlertTriangle className={`w-16 h-16 ${iconColor}`} />
+                        ) : (
+                            <CheckCircle2 className={`w-16 h-16 ${iconColor}`} />
+                        )}
                     </div>
                     <div className="space-y-2">
-                        <DialogTitle className="text-2xl font-bold text-gray-900">Success!</DialogTitle>
-                        <p className="text-emerald-600 font-semibold text-base">You are marked PRESENT</p>
+                        <DialogTitle className="text-2xl font-bold text-gray-900">
+                            {isLate ? "Checked In" : "Success!"}
+                        </DialogTitle>
+                        
+                        {/* Dynamic Text: PRESENT vs LATE */}
+                        <p className={`${statusColor} font-semibold text-base`}>
+                            You are marked {status}
+                        </p>
+                        
                         <p className="text-sm text-gray-500">
                             Your attendance has been recorded successfully.
                         </p>
@@ -49,7 +67,6 @@ export default function CheckInSuccessModal({
 
                 <div className="px-5 sm:px-6 pb-5">
                     <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 space-y-3">
-                        {/* Student Name and ID */}
                         {(studentName || studentId) && (
                             <div className="flex items-center justify-between py-2 border-b border-gray-200">
                                 <span className="text-sm font-medium text-gray-600">Student</span>
@@ -64,7 +81,6 @@ export default function CheckInSuccessModal({
                             </div>
                         )}
 
-                        {/* Class Name */}
                         <div className="flex items-center justify-between py-2 border-b border-gray-200">
                             <span className="text-sm font-medium text-gray-600">Class</span>
                             <span className="text-sm font-semibold text-gray-900 text-right max-w-[60%] break-words">
@@ -72,20 +88,18 @@ export default function CheckInSuccessModal({
                             </span>
                         </div>
 
-                        {/* Scan Time - Real timestamp in 12-hour format */}
                         <div className="flex items-center justify-between py-2 border-b border-gray-200">
                             <span className="text-sm font-medium text-gray-600">Time</span>
                             <span className="text-sm font-semibold text-gray-900 text-right">{displayTime}</span>
                         </div>
 
-                        {/* Status */}
                         <div className="flex items-center justify-between py-2">
                             <span className="text-sm font-medium text-gray-600">Status</span>
                             <span
                                 className="text-xs font-semibold px-3 py-1.5 rounded-full"
                                 style={{ 
-                                    backgroundColor: status === 'PRESENT' ? "#B9F8CF" : status === 'LATE' ? "#FFF085" : "#FFC9C9",
-                                    color: "#064e3b"
+                                    backgroundColor: badgeBg,
+                                    color: badgeText
                                 }}
                             >
                                 {status}
@@ -96,7 +110,7 @@ export default function CheckInSuccessModal({
 
                 <div className="px-5 sm:px-6 pb-5">
                     <Button 
-                        className="w-full" 
+                        className="w-full bg-black hover:bg-gray-900 text-white" 
                         onClick={handleBackClick}
                     >
                         Back to Dashboard
@@ -106,5 +120,3 @@ export default function CheckInSuccessModal({
         </Dialog>
     );
 }
-
-

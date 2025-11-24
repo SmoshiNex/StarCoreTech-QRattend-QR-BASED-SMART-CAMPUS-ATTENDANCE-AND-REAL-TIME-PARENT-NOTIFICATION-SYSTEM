@@ -1,137 +1,115 @@
-import { Head, router } from '@inertiajs/react';
-import { CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Head, Link } from '@inertiajs/react';
+import { CheckCircle, XCircle, ArrowLeft, Clock, Calendar } from 'lucide-react';
+// FIXED: Changed from @/Components to relative paths
+import { Button } from '../../Components/ui/button'; 
+import { Card, CardContent, CardHeader, CardTitle } from '../../Components/ui/card'; 
 
-export default function AttendanceResult({ success, status, message, class: classData, record }) {
-    const handleBackToDashboard = () => {
-        router.visit(route('student.dashboard'));
+export default function AttendanceResult({ auth, success, status, message, class: teacherClass, record }) {
+    // Helper to determine UI styles based on status
+    const getStatusStyles = () => {
+        if (!success) return {
+            icon: <XCircle className="h-16 w-16 text-red-500" />,
+            title: 'Check-in Failed',
+            color: 'text-red-700',
+            bg: 'bg-red-50',
+            border: 'border-red-200'
+        };
+
+        if (status === 'late') return {
+            icon: <Clock className="h-16 w-16 text-amber-500" />,
+            title: 'Marked Late',
+            color: 'text-amber-700',
+            bg: 'bg-amber-50',
+            border: 'border-amber-200'
+        };
+
+        return {
+            icon: <CheckCircle className="h-16 w-16 text-green-500" />,
+            title: 'Check-in Successful',
+            color: 'text-green-700',
+            bg: 'bg-green-50',
+            border: 'border-green-200'
+        };
     };
 
-    const handleTryAgain = () => {
-        window.location.reload();
-    };
-
-    const getStatusConfig = () => {
-        switch (status) {
-            case 'present':
-                return {
-                    icon: CheckCircle,
-                    bgColor: 'bg-green-50',
-                    borderColor: 'border-green-200',
-                    iconColor: 'text-green-600',
-                    titleColor: 'text-green-900',
-                    title: 'Success!',
-                    subtitle: 'You are marked PRESENT',
-                    badgeColor: 'bg-green-100 text-green-700',
-                };
-            case 'late':
-                return {
-                    icon: AlertCircle,
-                    bgColor: 'bg-yellow-50',
-                    borderColor: 'border-yellow-200',
-                    iconColor: 'text-yellow-600',
-                    titleColor: 'text-yellow-900',
-                    title: 'Checked In',
-                    subtitle: 'You are marked LATE',
-                    badgeColor: 'bg-yellow-100 text-yellow-700',
-                };
-            default:
-                return {
-                    icon: XCircle,
-                    bgColor: 'bg-red-50',
-                    borderColor: 'border-red-200',
-                    iconColor: 'text-red-600',
-                    titleColor: 'text-red-900',
-                    title: 'Error',
-                    subtitle: 'QR Code Invalid',
-                    badgeColor: 'bg-red-100 text-red-700',
-                };
-        }
-    };
-
-    const config = getStatusConfig();
-    const Icon = config.icon;
+    const styles = getStatusStyles();
 
     return (
-        <>
-            <Head title="Attendance Check-in" />
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-                <div className="max-w-md w-full">
-                    {/* Status Card */}
-                    <div className={`${config.bgColor} border ${config.borderColor} rounded-2xl p-8 text-center shadow-lg`}>
-                        {/* Icon */}
-                        <div className={`inline-flex items-center justify-center w-20 h-20 ${config.iconColor} bg-white rounded-full mb-4 shadow-md`}>
-                            <Icon className="w-10 h-10" />
-                        </div>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Attendance Result</h2>}
+        >
+            <Head title="Attendance Result" />
 
-                        {/* Title */}
-                        <h1 className={`text-2xl font-bold ${config.titleColor} mb-2`}>
-                            {config.title}
-                        </h1>
-                        <p className={`text-lg font-semibold ${config.iconColor} mb-6`}>
-                            {config.subtitle}
-                        </p>
-
-                        {/* Message */}
-                        {message && (
-                            <p className="text-sm text-gray-700 mb-6">
-                                {message}
-                            </p>
-                        )}
-
-                        {/* Class Info */}
-                        {classData && (
-                            <div className="bg-white rounded-lg p-4 mb-6 text-left">
-                                <div className="space-y-2">
-                                    <div>
-                                        <p className="text-xs text-gray-500">Class:</p>
-                                        <p className="font-semibold text-gray-900">{classData.class_code}</p>
-                                    </div>
-                                    {record && (
-                                        <>
-                                            <div>
-                                                <p className="text-xs text-gray-500">Time:</p>
-                                                <p className="font-medium text-gray-900">{record.checked_in_at}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-gray-500">Status:</p>
-                                                <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${config.badgeColor}`}>
-                                                    {record.status.toUpperCase()}
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
+            <div className="py-12">
+                <div className="max-w-xl mx-auto sm:px-6 lg:px-8">
+                    <Card className="text-center shadow-lg">
+                        <CardHeader>
+                            <div className="flex justify-center mb-4">
+                                <div className={`rounded-full p-3 ${styles.bg}`}>
+                                    {styles.icon}
                                 </div>
                             </div>
-                        )}
+                            <CardTitle className={`text-2xl ${styles.color}`}>
+                                {styles.title}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <p className="text-gray-600 text-lg">
+                                {message}
+                            </p>
 
-                        {/* Action Buttons */}
-                        <div className="space-y-3">
-                            <button
-                                onClick={handleBackToDashboard}
-                                className="w-full py-3 bg-black text-white font-semibold rounded-full hover:bg-gray-800 transition-colors"
-                            >
-                                Back to Dashboard
-                            </button>
-                            
-                            {status === 'error' && (
-                                <button
-                                    onClick={handleTryAgain}
-                                    className="w-full py-3 bg-white text-gray-700 font-semibold rounded-full border border-gray-300 hover:bg-gray-50 transition-colors"
-                                >
-                                    Try Again
-                                </button>
+                            {teacherClass && (
+                                <div className="bg-gray-50 rounded-lg p-6 text-left border border-gray-100">
+                                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                                        <Calendar className="h-5 w-5 mr-2 text-gray-500" />
+                                        Session Details
+                                    </h3>
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex justify-between py-2 border-b border-gray-100">
+                                            <span className="text-gray-500">Class</span>
+                                            <span className="font-medium text-gray-900">
+                                                {teacherClass.class_name || teacherClass.subject_name}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between py-2 border-b border-gray-100">
+                                            <span className="text-gray-500">Code</span>
+                                            <span className="font-medium text-gray-900">{teacherClass.class_code}</span>
+                                        </div>
+                                        {record && (
+                                            <div className="flex justify-between py-2 border-b border-gray-100">
+                                                <span className="text-gray-500">Time</span>
+                                                <span className="font-medium text-gray-900">{record.checked_in_at}</span>
+                                            </div>
+                                        )}
+                                        {status && (
+                                            <div className="flex justify-between py-2">
+                                                <span className="text-gray-500">Status</span>
+                                                <span className={`font-bold uppercase ${
+                                                    status === 'present' ? 'text-green-600' : 
+                                                    status === 'late' ? 'text-amber-600' : 'text-red-600'
+                                                }`}>
+                                                    {status}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             )}
-                        </div>
-                    </div>
 
-                    {/* Footer Note */}
-                    {success && record && (
-                        <p className="text-center text-sm text-gray-500 mt-6">
-                            Your attendance has been recorded successfully.
-                        </p>
-                    )}
+                            <div className="pt-4">
+                                <Link href={route('student.dashboard')}>
+                                    <Button className="w-full sm:w-auto">
+                                        <ArrowLeft className="mr-2 h-4 w-4" />
+                                        Return to Dashboard
+                                    </Button>
+                                </Link>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
-        </>
+        </AuthenticatedLayout>
     );
 }

@@ -6,7 +6,7 @@ export function parseAttendanceResponse(data) {
         return null;
     }
 
-    // Format class name: class_name OR (class_code - subject_name) OR subject_name OR class_code
+    // Format class name logic...
     let className = data.class?.class_name;
     if (!className && data.class) {
         if (data.class.class_code && data.class.subject_name) {
@@ -18,10 +18,10 @@ export function parseAttendanceResponse(data) {
     if (!className) {
         className = "Unknown Class";
     }
-    // Use the formatted 12-hour time from the API, or format it ourselves
+    
+    // Time formatting logic...
     let time = data.record?.checked_in_at_formatted;
     if (!time && data.record?.checked_in_at) {
-        // If we have the raw time, format it to 12-hour format
         const timeStr = data.record.checked_in_at;
         if (timeStr.includes(':')) {
             const [hours, minutes, seconds] = timeStr.split(':');
@@ -32,7 +32,6 @@ export function parseAttendanceResponse(data) {
         }
     }
     if (!time) {
-        // Fallback to current time in 12-hour format
         time = new Date().toLocaleTimeString('en-US', { 
             hour: "2-digit", 
             minute: "2-digit",
@@ -40,9 +39,12 @@ export function parseAttendanceResponse(data) {
             hour12: true
         });
     }
-    // For now, always show PRESENT in the student success modal.
-    // Late / Absent flows will be handled by dedicated modals later.
-    const status = 'PRESENT';
+    
+    // --- THE FIX IS HERE ---
+    // Old code was: const status = 'PRESENT';
+    // New code reads the status from the database:
+    const status = data.status ? data.status.toUpperCase() : 'PRESENT';
+    
     const studentName = data.student?.name || '';
     const studentId = data.student?.student_id || '';
 
@@ -54,4 +56,3 @@ export function parseAttendanceResponse(data) {
         studentId,
     };
 }
-

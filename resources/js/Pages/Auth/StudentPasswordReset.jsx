@@ -26,14 +26,15 @@ export default function StudentPasswordReset() {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
             <div className="w-full max-w-md relative">
-                <div className="absolute top-0 right-0 z-10 ">
+                <div className="absolute top-6 right-6 z-10">
                     <Link
                         href={route('teacher.password.reset')}
-                        className="text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 flex items-center gap-1"
+                        className="group flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200 text-sm font-medium text-gray-600 hover:text-black hover:shadow-md hover:border-gray-300 transition-all duration-200"
                     >
-                        Forgot Password Teachers
-                        <ArrowRight className="h-3 w-3" />
-                    </Link>
+                        <span>Teacher Reset</span>
+                        {/* Group-hover makes the arrow slide when you hover the button */}
+                        <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                        </Link>
                 </div>
 
                 <div className="bg-white p-8 rounded-lg shadow-md">
