@@ -191,7 +191,11 @@ export default function LiveAttendanceModal({ isOpen, onClose, classData }) {
                     // Start Session Form
                     <div className="space-y-4 py-6">
                         <h3 className="text-lg font-semibold">Start Attendance Session</h3>
-                        <p className="text-sm text-gray-600">Enter time allowed for students to check in as PRESENT:</p>
+                        <p className="text-sm text-gray-600"> QR Scanning Attendance for students to check in as PRESENT or Late:
+                        </p>
+                        <p className="text-sm text-gray-800">
+                            <b>Note:</b> If the session has started it cannot be cancelled unless clicking on <b>End Session</b> and if the session is ended for those who did not checked in are marked as <b className="text-red-600">Absent</b> automatically
+                        </p>
                         
                         {/* Show Enrolled Students Before Starting */}
                         {enrolledStudents.length > 0 && (

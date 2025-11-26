@@ -74,7 +74,7 @@ export default function ClassCard({ classItem, onEdit, onDelete, onShowQR, onVie
                     Registration QR
                 </Button>
                 <Button 
-                    className="w-full bg-black hover:bg-gray-900 text-white" 
+                    className="w-full bg-black hover:bg-gray-900 text-white " 
                     onClick={() => onStartAttendance(classItem)}
                 >
                     <Radio className="w-4 h-4 mr-2" />
